@@ -9,7 +9,7 @@ export const Sun: FC<
     orbitRadius?: number;
     orbitSpeed?: number;
     enableOrbit?: boolean;
-    orbitTilt?: number;
+    orbitHeight?: number;
   }
 > = ({
   position = [10, 0, 10],
@@ -19,24 +19,37 @@ export const Sun: FC<
   orbitRadius = 50,
   orbitSpeed = 0.02,
   enableOrbit = false,
-  orbitTilt = 0.409,
+  orbitHeight = 10,
 }) => {
   const sunRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
+  const glowRef1 = useRef<THREE.Mesh>(null);
+  const glowRef2 = useRef<THREE.Mesh>(null);
 
   useFrame((state, delta) => {
+    //  orbit
     if (enableOrbit && groupRef.current) {
       const time = state.clock.elapsedTime * orbitSpeed;
 
       const x = Math.cos(time) * orbitRadius;
-      const y = Math.sin(time) * orbitRadius * Math.sin(orbitTilt);
-      const z = Math.sin(time) * orbitRadius * Math.cos(orbitTilt);
+      const y = orbitHeight;
+      const z = Math.sin(time) * orbitRadius;
 
       groupRef.current.position.set(x, y, z);
     }
 
+    // Rotate sun
     if (sunRef.current) {
       sunRef.current.rotation.y += delta * 0.05;
+    }
+
+    // pulsing
+    const pulse = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 1;
+    if (glowRef1.current) {
+      glowRef1.current.scale.setScalar(1.15 * pulse);
+    }
+    if (glowRef2.current) {
+      glowRef2.current.scale.setScalar(1.5 * (2 - pulse) * 0.5);
     }
   });
 
@@ -64,7 +77,7 @@ export const Sun: FC<
         />
       </mesh>
 
-      <mesh>
+      <mesh ref={glowRef1}>
         <sphereGeometry args={[radius * 1.15, 32, 32]} />
         <meshBasicMaterial
           color="#ffff99"
@@ -75,7 +88,7 @@ export const Sun: FC<
         />
       </mesh>
 
-      <mesh>
+      <mesh ref={glowRef2}>
         <sphereGeometry args={[radius * 1.5, 24, 24]} />
         <meshBasicMaterial
           color="#ffff66"
