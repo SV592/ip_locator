@@ -1,29 +1,48 @@
 import React, { FC, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+
 import { SunProps } from "../types/geo";
 
-export const Sun: FC<SunProps> = ({
+export const Sun: FC<
+  SunProps & {
+    orbitRadius?: number;
+    orbitSpeed?: number;
+    enableOrbit?: boolean;
+    orbitTilt?: number;
+  }
+> = ({
   position = [10, 0, 10],
   intensity = 1.5,
   radius = 0.5,
   color = "#ffffaa",
+  orbitRadius = 50,
+  orbitSpeed = 0.02,
+  enableOrbit = false,
+  orbitTilt = 0.409,
 }) => {
   const sunRef = useRef<THREE.Mesh>(null);
-  const glowRef1 = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
 
-  //  pulse
-  useFrame((state) => {
-    const pulse = Math.sin(state.clock.elapsedTime * 2) * 0.05 + 1;
-    if (glowRef1.current) {
-      glowRef1.current.scale.setScalar(pulse);
+  useFrame((state, delta) => {
+    if (enableOrbit && groupRef.current) {
+      const time = state.clock.elapsedTime * orbitSpeed;
+
+      const x = Math.cos(time) * orbitRadius;
+      const y = Math.sin(time) * orbitRadius * Math.sin(orbitTilt);
+      const z = Math.sin(time) * orbitRadius * Math.cos(orbitTilt);
+
+      groupRef.current.position.set(x, y, z);
+    }
+
+    if (sunRef.current) {
+      sunRef.current.rotation.y += delta * 0.05;
     }
   });
 
   return (
-    <group>
+    <group ref={groupRef} position={enableOrbit ? [0, 0, 0] : position}>
       <directionalLight
-        position={position}
         intensity={intensity}
         color={color}
         castShadow
@@ -32,23 +51,20 @@ export const Sun: FC<SunProps> = ({
       />
 
       <pointLight
-        position={position}
         intensity={intensity * 0.5}
         color={color}
-        distance={30}
+        distance={100}
         decay={2}
       />
 
-      {/* sun sphere with texture */}
-      <mesh ref={sunRef} position={position}>
+      <mesh ref={sunRef}>
         <sphereGeometry args={[radius, 64, 64]} />
         <meshBasicMaterial
           map={new THREE.TextureLoader().load("textures/2k_sun.jpg")}
         />
       </mesh>
 
-      {/* glow layers */}
-      <mesh ref={glowRef1} position={position}>
+      <mesh>
         <sphereGeometry args={[radius * 1.15, 32, 32]} />
         <meshBasicMaterial
           color="#ffff99"
@@ -59,7 +75,7 @@ export const Sun: FC<SunProps> = ({
         />
       </mesh>
 
-      <mesh position={position}>
+      <mesh>
         <sphereGeometry args={[radius * 1.5, 24, 24]} />
         <meshBasicMaterial
           color="#ffff66"
@@ -69,19 +85,6 @@ export const Sun: FC<SunProps> = ({
           depthWrite={false}
         />
       </mesh>
-
-      <mesh position={position}>
-        <sphereGeometry args={[radius * 2.5, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.1}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
     </group>
   );
 };
-
-export default Sun;
