@@ -9,7 +9,6 @@ export const Moon: FC<
     orbitSpeed?: number;
     enableOrbit?: boolean;
     orbitTilt?: number;
-    orbitPhase?: number;
   }
 > = ({
   position = [-10, 0, -10],
@@ -20,23 +19,25 @@ export const Moon: FC<
   orbitSpeed = 0.1,
   enableOrbit = false,
   orbitTilt = 0.089,
-  orbitPhase = 0,
 }) => {
   const moonRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
+    // orbit
     if (enableOrbit && groupRef.current) {
-      const time = state.clock.elapsedTime * orbitSpeed + orbitPhase;
+      const time = state.clock.elapsedTime * orbitSpeed;
 
       const x = Math.cos(time) * orbitRadius;
       const y = Math.sin(time) * orbitRadius * Math.sin(orbitTilt);
       const z = Math.sin(time) * orbitRadius * Math.cos(orbitTilt);
 
       groupRef.current.position.set(x, y, z);
-    }
 
-    if (moonRef.current) {
+      if (moonRef.current) {
+        moonRef.current.rotation.y = -time;
+      }
+    } else if (moonRef.current) {
       moonRef.current.rotation.y += delta * 0.01;
     }
   });
