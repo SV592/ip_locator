@@ -15,7 +15,7 @@ const Scene: React.FC = () => {
     <Canvas camera={{ position: [20, 15, 20], fov: 60 }}>
       <Sun
         intensity={2}
-        radius={3}
+        radius={5}
         enableOrbit={true}
         orbitRadius={50}
         orbitSpeed={0.02}
@@ -29,7 +29,6 @@ const Scene: React.FC = () => {
         orbitSpeed={0.1}
         orbitTilt={0.089}
       />
-
       <ambientLight intensity={0.1} />
 
       <Earth />
