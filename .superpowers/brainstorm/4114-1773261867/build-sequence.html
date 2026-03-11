@@ -1,0 +1,40 @@
+<h2>Build Sequence</h2>
+<p class="subtitle">What order should we tackle these? Each phase builds on the previous one.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Performance First → Traceroute → UX Polish</h3>
+      <p><strong>Recommended.</strong> Fix the foundation (optimize GeoJSON loading, add error boundaries, loading states), then build the traceroute visualization on solid ground, then layer on UX features (history, themes, mobile). Each phase is usable on its own.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>No rework — perf fixes won't break later features</li><li>Traceroute viz benefits from optimized rendering</li><li>Polish phase refines everything at the end</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Longest time before the "wow factor" traceroute viz</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Traceroute First → Performance → UX Polish</h3>
+      <p>Build the headline feature (hop markers, arcs, camera fly-through) immediately, then optimize rendering to handle it smoothly, then add UX niceties.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Exciting results fast — see routes on the globe early</li><li>Performance tuning happens with real workload data</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>May need to refactor traceroute viz after perf pass</li><li>Building on unoptimized base could mask issues</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Interleaved — Foundation + Core Viz → Full Viz + Perf → UX Polish</h3>
+      <p>Do the most critical perf fixes (GeoJSON optimization, error boundaries) alongside the basic traceroute markers, then build the cinematic animations with full optimization, then polish everything.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Balanced — early results and solid foundation</li><li>Each phase is a complete, shippable milestone</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Slightly more complex planning</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

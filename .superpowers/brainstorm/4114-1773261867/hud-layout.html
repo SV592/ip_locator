@@ -1,0 +1,149 @@
+<h2>HUD Layout — Where do the panels go?</h2>
+<p class="subtitle">The globe stays full-screen. These panels float over it, sci-fi style.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0a0a0a;">
+      <!-- Layout A mockup -->
+      <div style="position: relative; width: 100%; height: 260px; border: 1px solid #333; border-radius: 8px; overflow: hidden; background: radial-gradient(circle at 50% 50%, #0d1b2a, #000);">
+        <!-- Globe representation -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(100,180,255,0.3); background: radial-gradient(circle at 40% 35%, #1a3a4a, #0a1520);"></div>
+        <!-- Top center search bar -->
+        <div style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 55%; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,140,0,0.4); border-radius: 14px; display: flex; align-items: center; padding: 0 12px;">
+          <span style="font-size: 9px; color: #666;">Enter IP or domain...</span>
+          <span style="margin-left: auto; font-size: 8px; background: #ff8c00; color: #000; padding: 2px 8px; border-radius: 8px;">TRACE</span>
+        </div>
+        <!-- Right sidebar -->
+        <div style="position: absolute; top: 50px; right: 8px; width: 28%; bottom: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 6px; padding: 8px;">
+          <div style="font-size: 8px; color: #ff8c00; margin-bottom: 6px; border-bottom: 1px solid rgba(255,140,0,0.2); padding-bottom: 4px;">ROUTE HOPS</div>
+          <div style="font-size: 7px; color: #888; margin-bottom: 4px;">① 192.168.1.1 — <span style="color:#0f0">1ms</span></div>
+          <div style="font-size: 7px; color: #aaa; margin-bottom: 4px; background: rgba(255,140,0,0.1); padding: 2px 4px; border-radius: 3px;">② 72.14.236.1 — <span style="color:#ff0">12ms</span></div>
+          <div style="font-size: 7px; color: #888; margin-bottom: 4px;">③ 108.170.248.1 — <span style="color:#ff0">18ms</span></div>
+          <div style="font-size: 7px; color: #888; margin-bottom: 4px;">④ 8.8.8.8 — <span style="color:#0f0">22ms</span></div>
+        </div>
+        <!-- Bottom stats bar -->
+        <div style="position: absolute; bottom: 8px; left: 8px; right: 36%; display: flex; gap: 8px;">
+          <div style="flex:1; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 4px 6px; text-align: center;">
+            <div style="font-size: 7px; color: #666;">HOPS</div>
+            <div style="font-size: 11px; color: #00bfff;">12</div>
+          </div>
+          <div style="flex:1; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 4px 6px; text-align: center;">
+            <div style="font-size: 7px; color: #666;">AVG RTT</div>
+            <div style="font-size: 11px; color: #0f0;">45ms</div>
+          </div>
+          <div style="flex:1; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 4px 6px; text-align: center;">
+            <div style="font-size: 7px; color: #666;">COUNTRIES</div>
+            <div style="font-size: 11px; color: #ff8c00;">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Right Sidebar HUD</h3>
+      <p>Search bar top-center, hop list in a right-side panel, stats bar along the bottom. Globe stays centered. Classic dashboard feel.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0a0a0a;">
+      <!-- Layout B mockup -->
+      <div style="position: relative; width: 100%; height: 260px; border: 1px solid #333; border-radius: 8px; overflow: hidden; background: radial-gradient(circle at 50% 50%, #0d1b2a, #000);">
+        <!-- Globe representation -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(100,180,255,0.3); background: radial-gradient(circle at 40% 35%, #1a3a4a, #0a1520);"></div>
+        <!-- Top center search bar -->
+        <div style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 55%; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,140,0,0.4); border-radius: 14px; display: flex; align-items: center; padding: 0 12px;">
+          <span style="font-size: 9px; color: #666;">Enter IP or domain...</span>
+          <span style="margin-left: auto; font-size: 8px; background: #ff8c00; color: #000; padding: 2px 8px; border-radius: 8px;">TRACE</span>
+        </div>
+        <!-- Bottom expandable panel -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: rgba(0,0,0,0.7); border-top: 1px solid rgba(100,180,255,0.2); backdrop-filter: blur(4px); padding: 8px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 8px; color: #ff8c00;">ROUTE: 8.8.8.8 (dns.google)</span>
+            <span style="font-size: 7px; color: #555; border: 1px solid #333; padding: 1px 6px; border-radius: 3px;">▲ EXPAND</span>
+          </div>
+          <!-- Horizontal hop timeline -->
+          <div style="display: flex; align-items: center; gap: 4px; padding: 4px 0;">
+            <div style="text-align: center;">
+              <div style="width: 18px; height: 18px; border-radius: 50%; background: rgba(0,255,0,0.2); border: 1px solid #0f0; margin: 0 auto 3px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 6px; color: #0f0;">1</span></div>
+              <div style="font-size: 6px; color: #888;">1ms</div>
+            </div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(to right, #0f0, #ff0);"></div>
+            <div style="text-align: center;">
+              <div style="width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,0,0.2); border: 1px solid #ff0; margin: 0 auto 3px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 6px; color: #ff0;">2</span></div>
+              <div style="font-size: 6px; color: #888;">12ms</div>
+            </div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(to right, #ff0, #ff0);"></div>
+            <div style="text-align: center;">
+              <div style="width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,0,0.2); border: 1px solid #ff0; margin: 0 auto 3px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 6px; color: #ff0;">3</span></div>
+              <div style="font-size: 6px; color: #888;">18ms</div>
+            </div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(to right, #ff0, #0f0);"></div>
+            <div style="text-align: center;">
+              <div style="width: 18px; height: 18px; border-radius: 50%; background: rgba(0,255,0,0.2); border: 1px solid #0f0; margin: 0 auto 3px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 6px; color: #0f0;">4</span></div>
+              <div style="font-size: 6px; color: #888;">22ms</div>
+            </div>
+          </div>
+          <!-- Stats row -->
+          <div style="display: flex; gap: 16px; margin-top: 6px;">
+            <span style="font-size: 7px; color: #666;">HOPS: <span style="color: #00bfff;">12</span></span>
+            <span style="font-size: 7px; color: #666;">AVG: <span style="color: #0f0;">45ms</span></span>
+            <span style="font-size: 7px; color: #666;">COUNTRIES: <span style="color: #ff8c00;">3</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Bottom Drawer + Timeline</h3>
+      <p>Hops shown as a horizontal timeline at the bottom, expandable upward for details. Globe gets maximum screen space. Feels more cinematic — less like a dashboard, more like a control room.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0a0a0a;">
+      <!-- Layout C mockup -->
+      <div style="position: relative; width: 100%; height: 260px; border: 1px solid #333; border-radius: 8px; overflow: hidden; background: radial-gradient(circle at 50% 50%, #0d1b2a, #000);">
+        <!-- Globe representation -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(100,180,255,0.3); background: radial-gradient(circle at 40% 35%, #1a3a4a, #0a1520);"></div>
+        <!-- Top center search bar -->
+        <div style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 55%; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,140,0,0.4); border-radius: 14px; display: flex; align-items: center; padding: 0 12px;">
+          <span style="font-size: 9px; color: #666;">Enter IP or domain...</span>
+          <span style="margin-left: auto; font-size: 8px; background: #ff8c00; color: #000; padding: 2px 8px; border-radius: 8px;">TRACE</span>
+        </div>
+        <!-- Left mini panels -->
+        <div style="position: absolute; top: 50px; left: 8px; width: 22%;">
+          <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 6px; margin-bottom: 6px;">
+            <div style="font-size: 7px; color: #ff8c00; margin-bottom: 3px;">TARGET</div>
+            <div style="font-size: 9px; color: #fff;">8.8.8.8</div>
+            <div style="font-size: 7px; color: #888;">dns.google</div>
+            <div style="font-size: 7px; color: #666;">Mountain View, US</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 6px;">
+            <div style="font-size: 7px; color: #ff8c00; margin-bottom: 3px;">STATS</div>
+            <div style="font-size: 7px; color: #888;">Hops: <span style="color:#00bfff">12</span> | RTT: <span style="color:#0f0">45ms</span></div>
+            <div style="font-size: 7px; color: #888;">Countries: <span style="color:#ff8c00">3</span></div>
+          </div>
+        </div>
+        <!-- Right hop list -->
+        <div style="position: absolute; top: 50px; right: 8px; width: 22%; background: rgba(0,0,0,0.5); border: 1px solid rgba(100,180,255,0.15); border-radius: 4px; padding: 6px; max-height: 160px; overflow: hidden;">
+          <div style="font-size: 7px; color: #ff8c00; margin-bottom: 4px;">HOPS</div>
+          <div style="font-size: 6px; color: #888; margin-bottom: 3px; display: flex; justify-content: space-between;"><span>① Local</span><span style="color:#0f0">1ms</span></div>
+          <div style="font-size: 6px; color: #aaa; margin-bottom: 3px; display: flex; justify-content: space-between; background: rgba(255,140,0,0.1); padding: 1px 3px; border-radius: 2px;"><span>② ISP Node</span><span style="color:#ff0">12ms</span></div>
+          <div style="font-size: 6px; color: #888; margin-bottom: 3px; display: flex; justify-content: space-between;"><span>③ Backbone</span><span style="color:#ff0">18ms</span></div>
+          <div style="font-size: 6px; color: #888; display: flex; justify-content: space-between;"><span>④ dns.google</span><span style="color:#0f0">22ms</span></div>
+        </div>
+        <!-- Bottom thin bar -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 20px; background: rgba(0,0,0,0.6); border-top: 1px solid rgba(100,180,255,0.1); display: flex; align-items: center; padding: 0 10px; gap: 12px;">
+          <span style="font-size: 6px; color: #555;">◉ TRACING COMPLETE</span>
+          <span style="font-size: 6px; color: #333;">|</span>
+          <span style="font-size: 6px; color: #555;">▶ REPLAY</span>
+          <span style="font-size: 6px; color: #333;">|</span>
+          <span style="font-size: 6px; color: #555;">⏱ HISTORY</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Dual Sidebar — Symmetric HUD</h3>
+      <p>Target info + stats on the left, hop list on the right, thin command bar at bottom. Symmetrical framing around the globe. Most "mission control" feeling.</p>
+    </div>
+  </div>
+</div>

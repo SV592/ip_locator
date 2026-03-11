@@ -1,0 +1,102 @@
+<h2>Design Overview — IP Locator Overhaul</h2>
+<p class="subtitle">Three phases, interleaved. Each phase is a shippable milestone.</p>
+
+<div class="section">
+  <h3>Phase 1: Foundation + Core Traceroute</h3>
+  <p class="label">Performance fixes alongside basic hop visualization</p>
+
+  <div class="mockup">
+    <div class="mockup-header">What gets built</div>
+    <div class="mockup-body" style="padding: 20px; font-size: 14px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <h4 style="color: #ff8c00; margin-bottom: 8px;">🔧 Performance</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Replace 14.6 MB countries.json with TopoJSON (~1.5 MB)</li>
+            <li>Add loading skeleton + suspense boundaries</li>
+            <li>Error boundaries around 3D scene</li>
+            <li>Lazy-load textures with progressive resolution</li>
+            <li>LOD system — simplified geometry when zoomed out</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color: #00bfff; margin-bottom: 8px;">📍 Core Traceroute</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Hop markers on globe (glowing dots at geolocations)</li>
+            <li>Sequential arc paths connecting hops (great-circle arcs)</li>
+            <li>Wire up IPTracker → API → Globe pipeline end-to-end</li>
+            <li>Stream partial results (show hops as they resolve)</li>
+            <li>Basic HUD panel showing hop list with RTT</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Phase 2: Cinematic Viz + Full Optimization</h3>
+  <p class="label">Camera animations, interactive arcs, rendering polish</p>
+
+  <div class="mockup">
+    <div class="mockup-header">What gets built</div>
+    <div class="mockup-body" style="padding: 20px; font-size: 14px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <h4 style="color: #ff8c00; margin-bottom: 8px;">🎬 Cinematic</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Camera fly-through: auto-animates hop to hop</li>
+            <li>Animated arc drawing (path traces in real-time)</li>
+            <li>Pulse/ripple effect at each hop marker</li>
+            <li>Globe auto-rotates to show route on submit</li>
+            <li>Particle trail along arcs (data flow visualization)</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color: #00bfff; margin-bottom: 8px;">⚡ Optimization</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Instanced rendering for hop markers</li>
+            <li>Geometry merging for country borders</li>
+            <li>Frustum culling for off-screen elements</li>
+            <li>Texture atlas for celestial bodies</li>
+            <li>RequestAnimationFrame budget management</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Phase 3: UX Polish + Mobile Fallback</h3>
+  <p class="label">Interactive exploration, history, and graceful degradation</p>
+
+  <div class="mockup">
+    <div class="mockup-header">What gets built</div>
+    <div class="mockup-body" style="padding: 20px; font-size: 14px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <h4 style="color: #ff8c00; margin-bottom: 8px;">🖱️ Interactive UX</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Click hop in sidebar → camera flies there</li>
+            <li>Hover hop marker → tooltip with details</li>
+            <li>Search history (localStorage)</li>
+            <li>Compare routes side-by-side (multi-trace)</li>
+            <li>Country/ASN filtering and grouping</li>
+            <li>Export route data (JSON/image)</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color: #00bfff; margin-bottom: 8px;">📱 Mobile Fallback</h4>
+          <ul style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Detect WebGL/device capability</li>
+            <li>2D map fallback (Leaflet or static SVG)</li>
+            <li>Card-based hop list for small screens</li>
+            <li>Touch-friendly input and results</li>
+            <li>Reduced data payloads for mobile</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

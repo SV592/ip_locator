@@ -1,0 +1,133 @@
+<h2>Component Architecture</h2>
+<p class="subtitle">New and modified components for the overhaul</p>
+
+<div class="section">
+  <h3>New Components</h3>
+  <div class="mockup">
+    <div class="mockup-header">src/app/components/ — additions</div>
+    <div class="mockup-body" style="padding: 20px; font-size: 13px; line-height: 2;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div>
+          <h4 style="color: #ff8c00; margin-bottom: 8px;">HUD Layer (HTML overlays)</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">HUD.tsx</span> — container, positions all panels</div>
+            <div><span style="color: #00bfff;">TargetPanel.tsx</span> — left panel: IP, hostname, location, org</div>
+            <div><span style="color: #00bfff;">StatsPanel.tsx</span> — left panel: hop count, avg RTT, countries</div>
+            <div><span style="color: #00bfff;">HopList.tsx</span> — right panel: scrollable hop list, click to select</div>
+            <div><span style="color: #00bfff;">CommandBar.tsx</span> — bottom bar: status, replay, history</div>
+            <div><span style="color: #00bfff;">SearchBar.tsx</span> — replaces IPTracker, top-center pill</div>
+          </div>
+
+          <h4 style="color: #ff8c00; margin-top: 16px; margin-bottom: 8px;">State</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">store/traceStore.ts</span> — Zustand store for all shared state</div>
+          </div>
+
+          <h4 style="color: #ff8c00; margin-top: 16px; margin-bottom: 8px;">Mobile Fallback</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">MobileView.tsx</span> — 2D map + card-based hop list</div>
+            <div><span style="color: #00bfff;">DeviceGate.tsx</span> — detects WebGL, routes to 3D or 2D</div>
+          </div>
+        </div>
+        <div>
+          <h4 style="color: #ff8c00; margin-bottom: 8px;">3D Scene (R3F children)</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">HopMarkers.tsx</span> — instanced glowing spheres at hop locations</div>
+            <div><span style="color: #00bfff;">RouteArcs.tsx</span> — great-circle arcs between hops, animated draw</div>
+            <div><span style="color: #00bfff;">CameraController.tsx</span> — smooth fly-to on hop select, auto-tour</div>
+            <div><span style="color: #00bfff;">HopTooltip.tsx</span> — HTML overlay on hover (drei's Html)</div>
+            <div><span style="color: #00bfff;">PulseRing.tsx</span> — expanding ring effect at active hop</div>
+          </div>
+
+          <h4 style="color: #ff8c00; margin-top: 16px; margin-bottom: 8px;">Optimized Replacements</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">Countries.tsx</span> — rewritten: TopoJSON, merged BufferGeometry</div>
+            <div><span style="color: #00bfff;">States.tsx</span> — same optimization as Countries</div>
+          </div>
+
+          <h4 style="color: #ff8c00; margin-top: 16px; margin-bottom: 8px;">API Changes</h4>
+          <div style="color: #aaa;">
+            <div><span style="color: #00bfff;">api/trace/route.ts</span> — rewrite to SSE streaming</div>
+            <div><span style="color: #00bfff;">hooks/useTrace.ts</span> — client hook for SSE consumption</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Modified vs Deleted</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="mockup">
+      <div class="mockup-header" style="color: #ff0;">Modified</div>
+      <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 2; color: #aaa;">
+        <div><strong>Scene.tsx</strong> — add CameraController, HopMarkers, RouteArcs as children</div>
+        <div><strong>Earth.tsx</strong> — add error boundary, progressive texture loading</div>
+        <div><strong>page.tsx</strong> — integrate HUD overlay, DeviceGate, Zustand provider</div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header" style="color: #f55;">Replaced</div>
+      <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 2; color: #aaa;">
+        <div><strong>IPTracker.tsx</strong> → SearchBar.tsx (same concept, new design)</div>
+        <div><strong>Hop.tsx</strong> → HopList.tsx + HopMarkers.tsx (split UI from 3D)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Data Flow Diagram</h3>
+  <div class="mockup">
+    <div class="mockup-header">How data moves through the system</div>
+    <div class="mockup-body" style="padding: 24px; font-size: 12px;">
+      <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; justify-content: center;">
+        <!-- User Input -->
+        <div style="text-align: center; min-width: 90px;">
+          <div style="background: rgba(255,140,0,0.15); border: 1px solid #ff8c00; border-radius: 6px; padding: 8px; margin-bottom: 4px;">
+            <div style="font-size: 10px; color: #ff8c00;">SearchBar</div>
+            <div style="font-size: 8px; color: #888;">user input</div>
+          </div>
+        </div>
+        <div style="color: #555; padding-top: 10px;">→</div>
+        <!-- API -->
+        <div style="text-align: center; min-width: 90px;">
+          <div style="background: rgba(255,85,85,0.15); border: 1px solid #f55; border-radius: 6px; padding: 8px; margin-bottom: 4px;">
+            <div style="font-size: 10px; color: #f55;">/api/trace</div>
+            <div style="font-size: 8px; color: #888;">SSE stream</div>
+          </div>
+        </div>
+        <div style="color: #555; padding-top: 10px;">→</div>
+        <!-- Store -->
+        <div style="text-align: center; min-width: 90px;">
+          <div style="background: rgba(0,191,255,0.15); border: 1px solid #00bfff; border-radius: 6px; padding: 8px; margin-bottom: 4px;">
+            <div style="font-size: 10px; color: #00bfff;">Zustand Store</div>
+            <div style="font-size: 8px; color: #888;">single source</div>
+          </div>
+        </div>
+        <div style="color: #555; padding-top: 10px;">→</div>
+        <!-- Consumers -->
+        <div style="text-align: center; min-width: 140px;">
+          <div style="background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.3); border-radius: 6px; padding: 8px;">
+            <div style="font-size: 10px; color: #0f0;">Consumers</div>
+            <div style="font-size: 8px; color: #888; line-height: 1.6; margin-top: 4px;">
+              HUD panels<br>
+              HopMarkers (3D)<br>
+              RouteArcs (3D)<br>
+              CameraController<br>
+              CommandBar
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- localStorage -->
+      <div style="text-align: center; margin-top: 12px;">
+        <div style="color: #555; font-size: 9px;">↕ persist</div>
+        <div style="display: inline-block; background: rgba(128,128,128,0.1); border: 1px solid #555; border-radius: 4px; padding: 4px 12px; margin-top: 2px;">
+          <span style="font-size: 9px; color: #888;">localStorage (search history)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

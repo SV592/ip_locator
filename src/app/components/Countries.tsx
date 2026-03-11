@@ -21,6 +21,7 @@ export const Countries: React.FC<CountriesProps> = ({
     const options = {
       json: data,
       radius,
+      fill: true,
       materalOptions: {
         color,
         size: 0.05,
