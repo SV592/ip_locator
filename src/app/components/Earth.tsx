@@ -1,12 +1,11 @@
-import React, { useRef } from "react";
-import * as THREE from "three";
+import React, { useRef } from 'react'
+import * as THREE from 'three'
+import { useLoader } from '@react-three/fiber'
 
 export const Earth = () => {
   const earthRef = useRef<THREE.Mesh>(null);
 
-  const earthTexture = new THREE.TextureLoader().load(
-    "textures/2k_earth_daymap.jpg"
-  );
+  const earthTexture = useLoader(THREE.TextureLoader, 'textures/2k_earth_daymap.jpg')
 
   return (
     <group>
@@ -37,7 +36,7 @@ export const Earth = () => {
         />
       </mesh>
 
-      {/* glow */}
+      {/* atmospheric glow */}
       <mesh scale={[1.08, 1.08, 1.08]}>
         <sphereGeometry args={[2, 64, 64]} />
         <shaderMaterial
