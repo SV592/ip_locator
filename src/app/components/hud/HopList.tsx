@@ -1,0 +1,64 @@
+'use client'
+
+import React from 'react'
+import { useTraceStore } from '../../store/traceStore'
+
+function rttColor(rtt: number | null): string {
+  if (rtt === null) return 'text-gray-600'
+  if (rtt < 50) return 'text-green-400'
+  if (rtt < 150) return 'text-yellow-400'
+  return 'text-red-400'
+}
+
+export const HopList: React.FC = () => {
+  const hops = useTraceStore((s) => s.hops)
+  const selectedHopIndex = useTraceStore((s) => s.selectedHopIndex)
+  const selectHop = useTraceStore((s) => s.selectHop)
+  const hoverHop = useTraceStore((s) => s.hoverHop)
+  const status = useTraceStore((s) => s.status)
+
+  if (status === 'idle') return null
+
+  return (
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 max-h-[60vh] overflow-y-auto">
+      <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
+        Route
+      </div>
+      <div className="space-y-0.5">
+        {hops.map((hop, i) => {
+          const avgRtt = hop.rtt.filter((r): r is number => r !== null)
+          const avg = avgRtt.length > 0 ? avgRtt.reduce((a, b) => a + b, 0) / avgRtt.length : null
+          const isSelected = selectedHopIndex === i
+
+          return (
+            <div
+              key={i}
+              onClick={() => selectHop(isSelected ? null : i)}
+              onMouseEnter={() => hoverHop(i)}
+              onMouseLeave={() => hoverHop(null)}
+              className={`flex items-center gap-2 text-[11px] px-2 py-1 rounded cursor-pointer transition-colors ${
+                isSelected
+                  ? 'bg-orange-500/20 border border-orange-500/30'
+                  : 'hover:bg-white/5'
+              }`}
+            >
+              <span className="text-gray-600 w-5 text-right font-mono">{hop.hop}</span>
+              <span className="text-white font-mono flex-1 truncate">
+                {hop.ip === '*' ? '* * *' : hop.ip}
+              </span>
+              <span className={`font-mono ${rttColor(avg)}`}>
+                {avg !== null ? `${Math.round(avg)}ms` : '\u2014'}
+              </span>
+              {hop.location?.country_code && (
+                <span className="text-gray-500 text-[9px]">{hop.location.country_code}</span>
+              )}
+            </div>
+          )
+        })}
+        {status === 'tracing' && (
+          <div className="text-gray-600 text-[10px] animate-pulse px-2 py-1">Tracing...</div>
+        )}
+      </div>
+    </div>
+  )
+}
