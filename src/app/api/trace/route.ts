@@ -1,256 +1,277 @@
-import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
-import dns from "dns";
-import os from "os";
+import { NextRequest } from 'next/server'
+import { spawn } from 'child_process'
+import dns from 'dns'
+import { promisify } from 'util'
+import os from 'os'
 
-const execAsync = promisify(exec);
-const dnsResolve = promisify(dns.resolve4);
+const dnsResolve = promisify(dns.resolve4)
 
-export async function POST(request: NextRequest) {
+// --- Input validation ---
+
+const VALID_TARGET = /^[a-zA-Z0-9.\-:]+$/
+const MAX_TARGET_LENGTH = 253
+
+function isValidTarget(target: string): boolean {
+  if (!target || target.length > MAX_TARGET_LENGTH) return false
+  if (!VALID_TARGET.test(target)) return false
+  return true
+}
+
+// --- Private IP detection (RFC 1918 + loopback + link-local) ---
+
+function isPrivateIP(ip: string): boolean {
+  // IPv6
+  if (ip === '::1') return true
+  if (ip.toLowerCase().startsWith('fc') || ip.toLowerCase().startsWith('fd')) return true
+
+  // IPv4
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(p => isNaN(p))) return false
+
+  const [a, b] = parts
+  if (a === 10) return true                          // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true   // 172.16.0.0/12
+  if (a === 192 && b === 168) return true             // 192.168.0.0/16
+  if (a === 127) return true                          // 127.0.0.0/8
+  if (a === 169 && b === 254) return true             // 169.254.0.0/16
+  return false
+}
+
+// --- Traceroute parsing ---
+
+interface ParsedHop {
+  hop: number
+  ip: string
+  hostname: string
+  rtt: (number | null)[]
+}
+
+function parseWindowsLine(line: string): ParsedHop | null {
+  const hopMatch = line.match(/^\s*(\d+)/)
+  if (!hopMatch) return null
+
+  const hopNumber = parseInt(hopMatch[1])
+  const times: (number | null)[] = []
+  const timeMatches = [...line.matchAll(/(\d+)\s*ms/g)]
+  for (const m of timeMatches) times.push(parseFloat(m[1]))
+  // Pad to 3 entries with nulls for any missing probes
+  while (times.length < 3) times.push(null)
+
+  const ipMatch = line.match(/\[([^\]]+)\]/) || line.match(/(\d+\.\d+\.\d+\.\d+)/)
+  const ip = ipMatch ? ipMatch[1] : '*'
+
+  const hostMatch = line.match(/^\s*\d+\s+(?:[\d<]+\s+ms\s+)+(.+?)\s+\[/)
+  const hostname = hostMatch ? hostMatch[1].trim() : ip
+
+  return { hop: hopNumber, ip, hostname, rtt: times }
+}
+
+function parseUnixLine(line: string): ParsedHop | null {
+  const hopMatch = line.match(/^\s*(\d+)\s+/)
+  if (!hopMatch) return null
+
+  const hopNumber = parseInt(hopMatch[1])
+
+  if (line.includes('* * *')) {
+    return { hop: hopNumber, ip: '*', hostname: '*', rtt: [null, null, null] }
+  }
+
+  const hostIpMatch = line.match(/^\s*\d+\s+(\S+)\s+\(([^)]+)\)/)
+  const hostname = hostIpMatch ? hostIpMatch[1] : '*'
+  const ip = hostIpMatch ? hostIpMatch[2] : '*'
+
+  const times: number[] = []
+  for (const m of line.matchAll(/([\d.]+)\s*ms/g)) times.push(parseFloat(m[1]))
+
+  return { hop: hopNumber, ip, hostname: hostname || ip, rtt: times.length > 0 ? times : [null, null, null] }
+}
+
+// --- Geolocation ---
+
+async function geolocateIP(ip: string): Promise<any> {
+  if (!ip || ip === '*' || isPrivateIP(ip)) return null
   try {
-    const body = await request.json();
-    const { ip } = body;
-
-    if (!ip) {
-      return NextResponse.json(
-        { error: "IP address is required" },
-        { status: 400 }
-      );
+    const res = await fetch(`https://ipapi.co/${ip}/json/`)
+    const data = await res.json()
+    if (data.error) return null
+    return {
+      city: data.city || 'Unknown',
+      region: data.region || '',
+      country: data.country_name || 'Unknown',
+      country_code: data.country_code || '',
+      lat: data.latitude || 0,
+      lon: data.longitude || 0,
+      org: data.org || null,
+      asn: data.asn || null,
     }
-
-    // resolve domain to IP if needed
-    let targetIp = ip;
-    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-
-    if (!ipRegex.test(ip)) {
-      try {
-        const ips = await dnsResolve(ip);
-        targetIp = ips[0];
-      } catch (error) {
-        return NextResponse.json(
-          { error: "Failed to resolve domain" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // perform traceroute
-    const tracerouteData = await performTraceroute(targetIp);
-
-    // enrich hops with geolocation data
-    const enrichedData = await enrichTracerouteData(tracerouteData);
-
-    return NextResponse.json(enrichedData);
-  } catch (error) {
-    console.error("Trace error:", error);
-    return NextResponse.json(
-      { error: "Failed to trace route: " + error },
-      { status: 500 }
-    );
+  } catch {
+    return null
   }
 }
 
-async function performTraceroute(targetIp: string): Promise<any> {
-  const platform = os.platform();
-  let command: string;
+// --- SSE endpoint ---
 
-  // platform-specific commands
-  switch (platform) {
-    case "win32":
-      command = `tracert -h 30 -w 1000 ${targetIp}`;
-      break;
-    case "darwin":
-      command = `traceroute -m 30 -w 1 -q 3 ${targetIp}`;
-      break;
-    default: // linux
-      command = `traceroute -m 30 -w 1 -q 3 ${targetIp}`;
+export async function GET(request: NextRequest) {
+  const target = request.nextUrl.searchParams.get('target')
+
+  if (!target || !isValidTarget(target)) {
+    return new Response(JSON.stringify({ error: 'Invalid target' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
-  try {
-    const { stdout } = await execAsync(command, {
-      timeout: 30000, // 30 second timeout
-      encoding: "utf8",
-    });
-
-    return parseTracerouteOutput(stdout, platform);
-  } catch (error: any) {
-    if (error.killed || error.signal === "SIGTERM") {
-      throw new Error("Traceroute timeout");
-    }
-    throw error;
-  }
-}
-
-function parseTracerouteOutput(output: string, platform: string): any {
-  const lines = output.split("\n").filter((line) => line.trim());
-  const hops: unknown[] = [];
-
-  // skip header lines
-  const startIndex = platform === "win32" ? 4 : 1;
-
-  for (let i = startIndex; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (platform === "win32") {
-      const hopMatch = line.match(/^\s*(\d+)/);
-      if (!hopMatch) continue;
-
-      const hopNumber = parseInt(hopMatch[1]);
-      const times: number[] = [];
-      const timeMatches = line.matchAll(/(\d+)\s*ms/g);
-
-      for (const match of timeMatches) {
-        times.push(parseFloat(match[1]));
-      }
-
-      // extract IP address
-      const ipMatch =
-        line.match(/$$([^$$]+)\]/) || line.match(/(\d+\.\d+\.\d+\.\d+)/);
-      const ip = ipMatch ? ipMatch[1] : null;
-
-      // extract hostname
-      const hostMatch = line.match(/^\s*\d+\s+(?:[^[]*\s+)?([^\s\[]+)/);
-      const hostname =
-        hostMatch && !hostMatch[1].includes("ms") ? hostMatch[1] : null;
-
-      if (ip || times.length > 0) {
-        hops.push({
-          hop: hopNumber,
-          ip: ip || "*",
-          hostname: hostname || ip || "*",
-          rtt: times.length > 0 ? times : [null, null, null],
-        });
-      }
-    } else {
-      // unix traceroute format
-      const hopMatch = line.match(/^\s*(\d+)\s+/);
-      if (!hopMatch) continue;
-
-      const hopNumber = parseInt(hopMatch[1]);
-
-      // Check for "* * *"
-      if (line.includes("* * *")) {
-        hops.push({
-          hop: hopNumber,
-          ip: "*",
-          hostname: "*",
-          rtt: [null, null, null],
-        });
-        continue;
-      }
-
-      // extract hostname and IP
-      const hostIpMatch = line.match(/^\s*\d+\s+([^\s]+)\s+$([^)]+)$/);
-      const hostname = hostIpMatch ? hostIpMatch[1] : null;
-      const ip = hostIpMatch ? hostIpMatch[2] : null;
-
-      // extract RTT times
-      const times: number[] = [];
-      const timeMatches = line.matchAll(/(\d+\.?\d*)\s*ms/g);
-
-      for (const match of timeMatches) {
-        times.push(parseFloat(match[1]));
-      }
-
-      hops.push({
-        hop: hopNumber,
-        ip: ip || "*",
-        hostname: hostname || ip || "*",
-        rtt: times.length > 0 ? times : [null, null, null],
-      });
+  // Resolve domain to IP if needed
+  let targetIp = target
+  const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/
+  if (!ipv4Regex.test(target)) {
+    try {
+      const ips = await dnsResolve(target)
+      targetIp = ips[0]
+    } catch {
+      return new Response(JSON.stringify({ error: 'Failed to resolve domain' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
   }
 
-  return { hops };
-}
+  const platform = os.platform()
+  const isWindows = platform === 'win32'
+  const cmd = isWindows ? 'tracert' : 'traceroute'
+  const args = isWindows
+    ? ['-h', '30', '-w', '1000', targetIp]
+    : ['-m', '30', '-w', '1', '-q', '3', targetIp]
 
-async function enrichTracerouteData(tracerouteData: any) {
-  const enrichedHops = await Promise.all(
-    tracerouteData.hops.map(async (hop: any) => {
-      if (
-        hop.ip &&
-        hop.ip !== "*" &&
-        !hop.ip.startsWith("192.168.") &&
-        !hop.ip.startsWith("10.")
-      ) {
-        try {
-          // use ipapi.co for geolocation
-          const response = await fetch(`https://ipapi.co/${hop.ip}/json/`);
-          const geoData = await response.json();
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder()
+      const send = (event: string, data: any) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+      }
 
-          if (geoData.error) {
-            return { ...hop, location: null, org: null };
+      const proc = spawn(cmd, args)
+      let buffer = ''
+      let hopCount = 0
+      let respondingHops = 0
+      const countries = new Set<string>()
+      const allRtts: number[] = []
+      const headerLines = isWindows ? 4 : 1
+      let lineCount = 0
+
+      // Queue to serialize async geolocation — prevents race conditions
+      // from concurrent data events
+      let queue: Promise<void> = Promise.resolve()
+
+      const timeout = setTimeout(() => {
+        proc.kill()
+        send('error', { message: 'Traceroute timed out' })
+        controller.close()
+      }, 30000)
+
+      async function processLine(line: string) {
+        lineCount++
+        if (lineCount <= headerLines || !line.trim()) return
+
+        const parsed = isWindows ? parseWindowsLine(line) : parseUnixLine(line)
+        if (!parsed) return
+
+        hopCount++
+        if (parsed.ip !== '*') respondingHops++
+        for (const t of parsed.rtt) {
+          if (t !== null) allRtts.push(t)
+        }
+
+        // Geolocate (async but serialized via queue)
+        const geo = await geolocateIP(parsed.ip)
+        const hop = {
+          hop: parsed.hop,
+          ip: parsed.ip,
+          hostname: parsed.hostname,
+          rtt: parsed.rtt,
+          location: geo ? {
+            city: geo.city,
+            region: geo.region,
+            country: geo.country,
+            country_code: geo.country_code,
+            lat: geo.lat,
+            lon: geo.lon,
+          } : null,
+          org: geo?.org || (isPrivateIP(parsed.ip) ? 'Private Network' : null),
+          asn: geo?.asn || null,
+        }
+
+        if (geo?.country_code) countries.add(geo.country_code)
+        send('hop', hop)
+      }
+
+      proc.stdout.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString()
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          // Chain each line onto the queue to serialize processing
+          queue = queue.then(() => processLine(line))
+        }
+      })
+
+      proc.on('close', () => {
+        clearTimeout(timeout)
+
+        // Process remaining buffer (also geolocated), then emit summary
+        queue = queue.then(async () => {
+          if (buffer.trim()) {
+            await processLine(buffer)
           }
 
-          return {
-            ...hop,
-            location: {
-              city: geoData.city || "Unknown",
-              region: geoData.region || "",
-              country: geoData.country_name || "Unknown",
-              country_code: geoData.country_code || "",
-              lat: geoData.latitude || 0,
-              lon: geoData.longitude || 0,
-            },
-            org: geoData.org || "Unknown",
-            asn: geoData.asn || null,
-          };
-        } catch (error) {
-          console.error(`Failed to geolocate ${hop.ip}:`, error);
-          return { ...hop, location: null, org: null };
-        }
-      }
+          // Emit target event: geolocate the target IP itself
+          const targetGeo = await geolocateIP(targetIp)
+          if (targetGeo) {
+            send('target', {
+              ip: targetIp,
+              hostname: target !== targetIp ? target : targetIp,
+              city: targetGeo.city,
+              region: targetGeo.region,
+              country: targetGeo.country,
+              lat: targetGeo.lat,
+              lon: targetGeo.lon,
+              org: targetGeo.org || 'Unknown',
+            })
+          }
 
-      // local or no-response hop
-      return {
-        ...hop,
-        location: null,
-        org: hop.ip.startsWith("192.168.") ? "Local Network" : null,
-      };
-    })
-  );
+          const avgRtt = allRtts.length > 0
+            ? allRtts.reduce((s, r) => s + r, 0) / allRtts.length
+            : 0
 
-  // Get target details
-  const targetHop = enrichedHops[enrichedHops.length - 1];
-  const target =
-    targetHop && targetHop.ip !== "*"
-      ? {
-          ip: targetHop.ip,
-          hostname: targetHop.hostname,
-          city: targetHop.location?.city || "Unknown",
-          region: targetHop.location?.region || "",
-          country: targetHop.location?.country || "Unknown",
-          lat: targetHop.location?.lat || 0,
-          lon: targetHop.location?.lon || 0,
-          org: targetHop.org || "Unknown",
-        }
-      : null;
+          send('summary', {
+            totalHops: hopCount,
+            respondingHops,
+            countries: countries.size,
+            averageRtt: Math.round(avgRtt * 10) / 10,
+          })
+          send('done', {})
+          controller.close()
+        })
+      })
 
-  return {
-    target,
-    hops: enrichedHops,
-    summary: {
-      totalHops: enrichedHops.length,
-      respondingHops: enrichedHops.filter((h) => h.ip !== "*").length,
-      countries: [
-        ...new Set(
-          enrichedHops
-            .filter((h) => h.location?.country_code)
-            .map((h) => h.location.country_code)
-        ),
-      ].length,
-      averageRtt: calculateAverageRtt(enrichedHops),
+      proc.stderr.on('data', (chunk: Buffer) => {
+        console.error('traceroute stderr:', chunk.toString())
+      })
+
+      proc.on('error', (err) => {
+        clearTimeout(timeout)
+        send('error', { message: `Traceroute failed: ${err.message}` })
+        controller.close()
+      })
     },
-  };
-}
+  })
 
-function calculateAverageRtt(hops: any[]): number {
-  const allRtts = hops
-    .flatMap((h) => h.rtt)
-    .filter((rtt) => rtt !== null && !isNaN(rtt));
-
-  if (allRtts.length === 0) return 0;
-
-  return allRtts.reduce((sum, rtt) => sum + rtt, 0) / allRtts.length;
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
