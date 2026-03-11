@@ -1,52 +1,26 @@
-import React, { useRef, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import React, { useMemo } from 'react'
+import * as topojson from 'topojson-client'
+import worldData from 'world-atlas/countries-50m.json'
+import { buildBorderGeometryFromFeatures } from '../utils/geoMath'
 
-import countriesData from "../../../public/geo_json/countries.json";
-import { GeoJSONFeatureCollection, CountriesProps } from "../types/geo";
-import { drawThreeGeo } from "../utils/threeGeoJSON";
+interface CountriesProps {
+  radius?: number
+  color?: string
+}
 
 export const Countries: React.FC<CountriesProps> = ({
-  data = countriesData as GeoJSONFeatureCollection,
   radius = 2.01,
-  color = "#fff",
-  animated = true,
+  color = '#ffffff',
 }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const countriesRef = useRef<THREE.Object3D | null>(null);
+  const geometry = useMemo(() => {
+    const topology = worldData as any
+    const geojson = topojson.feature(topology, topology.objects.countries) as any
+    return buildBorderGeometryFromFeatures(geojson.features, radius)
+  }, [radius])
 
-  useEffect(() => {
-    if (!groupRef.current) return;
-
-    const options = {
-      json: data,
-      radius,
-      fill: true,
-      materalOptions: {
-        color,
-        size: 0.05,
-      },
-    };
-
-    const countries = drawThreeGeo(options);
-    countriesRef.current = countries;
-    groupRef.current.add(countries);
-
-    return () => {
-      if (groupRef.current && countriesRef.current) {
-        groupRef.current.remove(countriesRef.current);
-      }
-    };
-  }, [data, radius, color]);
-
-  useFrame((state) => {
-    if (animated && countriesRef.current?.userData.update) {
-      countriesRef.current.userData.update(state.clock.elapsedTime);
-    }
-    // if (groupRef.current) {
-    //   groupRef.current.rotation.y += 0.01;
-    // }
-  });
-
-  return <group ref={groupRef} />;
-};
+  return (
+    <lineSegments geometry={geometry}>
+      <lineBasicMaterial color={color} transparent opacity={0.4} />
+    </lineSegments>
+  )
+}
