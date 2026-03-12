@@ -20,6 +20,8 @@ import { FlyingSaucer } from './FlyingSaucer'
 import { Comet } from './Comet'
 import { ShootingStars } from './ShootingStars'
 import { WarpSpeed } from './WarpSpeed'
+import { GlobeGrid } from './GlobeGrid'
+import { HopPulse } from './HopPulse'
 
 const Scene: React.FC = () => {
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -46,9 +48,11 @@ const Scene: React.FC = () => {
         <ambientLight intensity={0.1} />
 
         <Earth />
+        <GlobeGrid />
         <Countries />
         <States />
         <HopMarkers />
+        <HopPulse />
         <RouteArcs />
         <ArcParticles />
 

@@ -9,7 +9,7 @@ interface CountriesProps {
 }
 
 export const Countries: React.FC<CountriesProps> = ({
-  radius = 2.01,
+  radius = 2.012,
   color = '#ffffff',
 }) => {
   const geometry = useMemo(() => {
@@ -22,7 +22,7 @@ export const Countries: React.FC<CountriesProps> = ({
 
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color={color} transparent opacity={0.4} />
+      <lineBasicMaterial color={color} transparent opacity={0.55} depthWrite={false} />
     </lineSegments>
   )
 }
