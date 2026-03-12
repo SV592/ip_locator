@@ -21,8 +21,15 @@ export function latLonToVec3(lat: number, lon: number, radius: number): THREE.Ve
  * Build a single merged BufferGeometry from GeoJSON polygon rings.
  * Each ring is converted to line segments on the sphere surface.
  */
+interface GeoFeature {
+  geometry: {
+    type: string
+    coordinates: number[][][] | number[][][][]
+  }
+}
+
 export function buildBorderGeometryFromFeatures(
-  features: any[],
+  features: GeoFeature[],
   radius: number
 ): THREE.BufferGeometry {
   const positions: number[] = []
@@ -31,9 +38,9 @@ export function buildBorderGeometryFromFeatures(
     const geom = feature.geometry
     const rings: number[][][] =
       geom.type === 'Polygon'
-        ? geom.coordinates
+        ? (geom.coordinates as number[][][])
         : geom.type === 'MultiPolygon'
-          ? geom.coordinates.flat()
+          ? (geom.coordinates as number[][][][]).flat()
           : []
 
     for (const ring of rings) {

@@ -12,7 +12,7 @@ export const States: React.FC<StatesProps> = ({
   color = '#ffffff',
 }) => {
   const geometry = useMemo(() => {
-    const geojson = statesData as any
+    const geojson = statesData as unknown as { features: { geometry: { type: string; coordinates: number[][][] | number[][][][] } }[] }
     return buildBorderGeometryFromFeatures(geojson.features, radius)
   }, [radius])
 

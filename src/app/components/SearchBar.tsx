@@ -2,12 +2,10 @@
 
 import React, { useState, type FormEvent } from 'react'
 import { useTrace } from '../hooks/useTrace'
-import { useTraceStore } from '../store/traceStore'
 
 export const SearchBar: React.FC = () => {
   const [input, setInput] = useState('')
   const { trace, abort, isTracing } = useTrace()
-  const status = useTraceStore((s) => s.status)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()

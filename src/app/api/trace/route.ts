@@ -88,7 +88,18 @@ function parseUnixLine(line: string): ParsedHop | null {
 
 // --- Geolocation ---
 
-async function geolocateIP(ip: string): Promise<any> {
+interface GeoResult {
+  city: string
+  region: string
+  country: string
+  country_code: string
+  lat: number
+  lon: number
+  org: string | null
+  asn: string | null
+}
+
+async function geolocateIP(ip: string): Promise<GeoResult | null> {
   if (!ip || ip === '*' || isPrivateIP(ip)) return null
   try {
     const res = await fetch(`https://ipapi.co/${ip}/json/`)
@@ -146,7 +157,7 @@ export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
-      const send = (event: string, data: any) => {
+      const send = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
       }
 

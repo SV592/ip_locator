@@ -90,17 +90,19 @@ export function useTrace() {
 
     try {
       await consumeSSEStream(url, controller.signal, handlers)
-    } catch (err: any) {
-      if (err.name === 'AbortError') return
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
 
       // Retry once on connection failure (spec: retry once then show error)
       try {
         const retryController = new AbortController()
         abortRef.current = retryController
         await consumeSSEStream(url, retryController.signal, handlers)
-      } catch (retryErr: any) {
-        if (retryErr.name !== 'AbortError') {
+      } catch (retryErr: unknown) {
+        if (retryErr instanceof Error && retryErr.name !== 'AbortError') {
           failTrace(retryErr.message || 'Connection failed after retry')
+        } else if (!(retryErr instanceof Error)) {
+          failTrace('Connection failed after retry')
         }
       }
     }

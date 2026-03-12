@@ -13,9 +13,11 @@ export const Countries: React.FC<CountriesProps> = ({
   color = '#ffffff',
 }) => {
   const geometry = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const topology = worldData as any
-    const geojson = topojson.feature(topology, topology.objects.countries) as any
-    return buildBorderGeometryFromFeatures(geojson.features, radius)
+    const geojson = topojson.feature(topology, topology.objects.countries)
+    const features = 'features' in geojson ? geojson.features : [geojson]
+    return buildBorderGeometryFromFeatures(features as Parameters<typeof buildBorderGeometryFromFeatures>[0], radius)
   }, [radius])
 
   return (
