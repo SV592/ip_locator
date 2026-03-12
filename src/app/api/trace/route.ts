@@ -167,7 +167,13 @@ export async function GET(request: NextRequest) {
   // Resolve domain to IP if needed
   let targetIp = target
   const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/
-  if (!ipv4Regex.test(target)) {
+  const localhostAliases: Record<string, string> = {
+    'localhost': '127.0.0.1',
+    '::1': '127.0.0.1',
+  }
+  if (localhostAliases[target.toLowerCase()]) {
+    targetIp = localhostAliases[target.toLowerCase()]
+  } else if (!ipv4Regex.test(target)) {
     try {
       const ips = await dnsResolve(target)
       targetIp = ips[0]
