@@ -12,7 +12,7 @@ interface CameraControllerProps {
   controlsRef: React.RefObject<OrbitControlsImpl | null>
 }
 
-const FLIGHT_DURATION = 1.8 // seconds
+const FLIGHT_DURATION = 1.2 // seconds
 
 export const CameraController: React.FC<CameraControllerProps> = ({
   controlsRef,
@@ -98,12 +98,15 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const rawT = Math.min(elapsed / FLIGHT_DURATION, 1)
     const t = easeInOutCubic(rawT)
 
-    // Interpolate position (with minimum radius to prevent clipping through globe)
-    camera.position.lerpVectors(startPos.current, endPos.current, t)
-    const minRadius = EARTH_RADIUS + 2 // never closer than 2 units above surface
-    if (camera.position.length() < minRadius) {
-      camera.position.normalize().multiplyScalar(minRadius)
-    }
+    // Spherical interpolation: lerp direction on the sphere, lerp distance separately
+    // This arcs the camera around the globe instead of cutting through it
+    const startDir = startPos.current.clone().normalize()
+    const endDir = endPos.current.clone().normalize()
+    const dir = startDir.clone().lerp(endDir, t).normalize()
+    const startDist = startPos.current.length()
+    const endDist = endPos.current.length()
+    const dist = startDist + (endDist - startDist) * t
+    camera.position.copy(dir.multiplyScalar(dist))
 
     // Interpolate look-at
     const currentLookAt = new THREE.Vector3().lerpVectors(
