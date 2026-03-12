@@ -6,6 +6,7 @@ import { TargetPanel } from './hud/TargetPanel'
 import { StatsPanel } from './hud/StatsPanel'
 import { HopList } from './hud/HopList'
 import { CommandBar } from './hud/CommandBar'
+import { LocationDetail } from './hud/LocationDetail'
 
 export const HUD: React.FC = () => {
   return (
@@ -23,9 +24,10 @@ export const HUD: React.FC = () => {
           <StatsPanel />
         </div>
 
-        {/* Right panel */}
-        <div className="pointer-events-auto w-72">
+        {/* Right panels */}
+        <div className="pointer-events-auto w-72 space-y-2">
           <HopList />
+          <LocationDetail />
         </div>
       </div>
 
