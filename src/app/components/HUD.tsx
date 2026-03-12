@@ -8,6 +8,9 @@ import { HopList } from './hud/HopList'
 import { CommandBar } from './hud/CommandBar'
 import { LocationDetail } from './hud/LocationDetail'
 import { HistoryPanel } from './hud/HistoryPanel'
+import { InfoPanel } from './hud/InfoPanel'
+import { KonamiCode } from './KonamiCode'
+import { Achievement } from './hud/Achievement'
 
 export const HUD: React.FC = () => {
   return (
@@ -21,6 +24,7 @@ export const HUD: React.FC = () => {
       <div className="flex-1 flex justify-between items-start p-4 gap-4">
         {/* Left panels */}
         <div className="pointer-events-auto w-64 space-y-2">
+          <InfoPanel />
           <TargetPanel />
           <StatsPanel />
           <HistoryPanel />
@@ -37,6 +41,8 @@ export const HUD: React.FC = () => {
       <div className="pointer-events-auto">
         <CommandBar />
       </div>
+      <Achievement />
+      <KonamiCode />
     </div>
   )
 }
