@@ -14,6 +14,8 @@ import { Moon } from './Moon'
 import { Earth } from './Earth'
 import { HopMarkers } from './HopMarkers'
 import { RouteArcs } from './RouteArcs'
+import { ArcParticles } from './ArcParticles'
+import { PerfMonitor } from './PerfMonitor'
 
 const Scene: React.FC = () => {
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -44,6 +46,7 @@ const Scene: React.FC = () => {
         <States />
         <HopMarkers />
         <RouteArcs />
+        <ArcParticles />
 
         <OrbitControls
           ref={controlsRef}
@@ -55,6 +58,7 @@ const Scene: React.FC = () => {
           minDistance={5}
         />
         <CameraController controlsRef={controlsRef} />
+        <PerfMonitor />
 
         <Stars />
         <color attach="background" args={['#000000']} />
