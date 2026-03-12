@@ -16,6 +16,10 @@ import { HopMarkers } from './HopMarkers'
 import { RouteArcs } from './RouteArcs'
 import { ArcParticles } from './ArcParticles'
 import { PerfMonitor } from './PerfMonitor'
+import { FlyingSaucer } from './FlyingSaucer'
+import { Comet } from './Comet'
+import { ShootingStars } from './ShootingStars'
+import { WarpSpeed } from './WarpSpeed'
 
 const Scene: React.FC = () => {
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -61,6 +65,13 @@ const Scene: React.FC = () => {
         <PerfMonitor />
 
         <Stars />
+
+        {/* Decorative scene elements */}
+        <FlyingSaucer />
+        <Comet />
+        <ShootingStars />
+        <WarpSpeed />
+
         <color attach="background" args={['#000000']} />
       </Suspense>
     </Canvas>
