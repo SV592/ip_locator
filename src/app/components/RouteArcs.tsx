@@ -2,7 +2,9 @@
 
 import React, { useRef, useMemo } from 'react'
 import * as THREE from 'three'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, extend } from '@react-three/fiber'
+
+extend({ ThreeLine: THREE.Line })
 import { useTraceStore } from '../store/traceStore'
 import { latLonToVec3, EARTH_RADIUS } from '../utils/geoMath'
 
