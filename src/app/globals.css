@@ -7,3 +7,26 @@ body {
   box-sizing: border-box;
   background-color: black;
 }
+
+/* Custom scrollbar for HUD panels */
+.hud-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hud-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hud-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 60, 0.3);
+  border-radius: 2px;
+}
+
+.hud-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 146, 60, 0.5);
+}
+
+.hud-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 146, 60, 0.3) transparent;
+}

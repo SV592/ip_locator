@@ -19,7 +19,7 @@ export const HopList: React.FC = () => {
   if (status === 'idle') return null
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 max-h-[40vh] overflow-y-auto">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 max-h-[40vh] overflow-y-auto hud-scrollbar">
       <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
         Route
       </div>
