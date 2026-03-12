@@ -8,6 +8,9 @@ export const CommandBar: React.FC = () => {
   const error = useTraceStore((s) => s.error)
   const clearTrace = useTraceStore((s) => s.clearTrace)
   const hops = useTraceStore((s) => s.hops)
+  const isReplaying = useTraceStore((s) => s.isReplaying)
+  const startReplay = useTraceStore((s) => s.startReplay)
+  const stopReplay = useTraceStore((s) => s.stopReplay)
 
   const statusText =
     status === 'idle'
@@ -39,12 +42,26 @@ export const CommandBar: React.FC = () => {
       </div>
 
       {status !== 'idle' && (
-        <button
-          onClick={clearTrace}
-          className="text-[10px] text-gray-500 hover:text-white uppercase tracking-wider transition-colors"
-        >
-          Clear
-        </button>
+        <div className="flex items-center gap-3">
+          {status === 'complete' && (
+            <button
+              onClick={isReplaying ? stopReplay : startReplay}
+              className={`text-[10px] uppercase tracking-wider transition-colors font-mono ${
+                isReplaying
+                  ? 'text-orange-400 hover:text-orange-300'
+                  : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              {isReplaying ? 'stop tour' : 'replay'}
+            </button>
+          )}
+          <button
+            onClick={clearTrace}
+            className="text-[10px] text-gray-500 hover:text-white uppercase tracking-wider transition-colors"
+          >
+            Clear
+          </button>
+        </div>
       )}
     </div>
   )
