@@ -6,6 +6,41 @@ import os from 'os'
 
 const dnsResolve = promisify(dns.resolve4)
 
+// --- Rate limiting ---
+
+const RATE_LIMIT_WINDOW = 60_000 // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5
+const MAX_CONCURRENT_TRACES = 10
+
+const requestLog = new Map<string, number[]>()
+let activeTraces = 0
+
+function getClientIP(request: NextRequest): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || '127.0.0.1'
+}
+
+function isRateLimited(clientIp: string): boolean {
+  const now = Date.now()
+  const timestamps = requestLog.get(clientIp) || []
+  const recent = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW)
+  requestLog.set(clientIp, recent)
+  if (recent.length >= MAX_REQUESTS_PER_WINDOW) return true
+  recent.push(now)
+  return false
+}
+
+// Clean stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [ip, timestamps] of requestLog) {
+    const recent = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW)
+    if (recent.length === 0) requestLog.delete(ip)
+    else requestLog.set(ip, recent)
+  }
+}, 300_000)
+
 // --- Input validation ---
 
 const VALID_TARGET = /^[a-zA-Z0-9.\-:]+$/
@@ -20,11 +55,22 @@ function isValidTarget(target: string): boolean {
 // --- Private IP detection (RFC 1918 + loopback + link-local) ---
 
 function isPrivateIP(ip: string): boolean {
+  const lower = ip.toLowerCase()
+
   // IPv6
-  if (ip === '::1') return true
-  if (ip.toLowerCase().startsWith('fc') || ip.toLowerCase().startsWith('fd')) return true
+  if (lower === '::1') return true                    // loopback
+  if (lower === '::') return true                     // unspecified
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true  // unique local
+  if (lower.startsWith('fe80')) return true            // link-local
+  if (lower.startsWith('ff')) return true              // multicast
+  if (lower.startsWith('100::')) return true           // discard prefix
+  if (lower.startsWith('::ffff:')) {                   // IPv4-mapped IPv6
+    const mapped = lower.slice(7)
+    if (mapped.includes('.')) return isPrivateIP(mapped)
+  }
 
   // IPv4
+  if (ip === '0.0.0.0') return true
   const parts = ip.split('.').map(Number)
   if (parts.length !== 4 || parts.some(p => isNaN(p))) return false
 
@@ -34,6 +80,7 @@ function isPrivateIP(ip: string): boolean {
   if (a === 192 && b === 168) return true             // 192.168.0.0/16
   if (a === 127) return true                          // 127.0.0.0/8
   if (a === 169 && b === 254) return true             // 169.254.0.0/16
+  if (a === 0) return true                            // 0.0.0.0/8
   return false
 }
 
@@ -99,10 +146,59 @@ interface GeoResult {
   asn: string | null
 }
 
+// --- Geolocation cache ---
+
+const GEO_CACHE_TTL = 600_000 // 10 minutes
+const geoCache = new Map<string, { result: GeoResult | null; expires: number }>()
+
 async function geolocateIP(ip: string): Promise<GeoResult | null> {
   if (!ip || ip === '*' || isPrivateIP(ip)) return null
 
-  // Try ip-api.com first (faster, no HTTPS on free tier)
+  // Check cache
+  const cached = geoCache.get(ip)
+  if (cached && cached.expires > Date.now()) return cached.result
+
+  const result = await fetchGeoData(ip)
+  geoCache.set(ip, { result, expires: Date.now() + GEO_CACHE_TTL })
+
+  // Evict stale entries if cache grows large
+  if (geoCache.size > 500) {
+    const now = Date.now()
+    for (const [key, val] of geoCache) {
+      if (val.expires < now) geoCache.delete(key)
+    }
+  }
+
+  return result
+}
+
+async function fetchGeoData(ip: string): Promise<GeoResult | null> {
+  // Try ipapi.co first (HTTPS)
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    const data = await res.json()
+    if (!data.error) {
+      return {
+        city: data.city || 'Unknown',
+        region: data.region || '',
+        country: data.country_name || 'Unknown',
+        country_code: data.country_code || '',
+        lat: data.latitude || 0,
+        lon: data.longitude || 0,
+        org: data.org || null,
+        asn: data.asn || null,
+      }
+    }
+  } catch {
+    // fall through to backup
+  }
+
+  // Fallback: ip-api.com (HTTP only on free tier)
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 4000)
@@ -124,37 +220,32 @@ async function geolocateIP(ip: string): Promise<GeoResult | null> {
       }
     }
   } catch {
-    // fall through to backup
-  }
-
-  // Fallback: ipapi.co
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 4000)
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-      signal: controller.signal,
-    })
-    clearTimeout(timer)
-    const data = await res.json()
-    if (data.error) return null
-    return {
-      city: data.city || 'Unknown',
-      region: data.region || '',
-      country: data.country_name || 'Unknown',
-      country_code: data.country_code || '',
-      lat: data.latitude || 0,
-      lon: data.longitude || 0,
-      org: data.org || null,
-      asn: data.asn || null,
-    }
-  } catch {
     return null
   }
+
+  return null
 }
 
 // --- SSE endpoint ---
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientIp = getClientIP(request)
+  if (isRateLimited(clientIp)) {
+    return new Response(JSON.stringify({ error: 'Too many requests. Try again in a minute.' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '60' },
+    })
+  }
+
+  // Concurrent trace cap
+  if (activeTraces >= MAX_CONCURRENT_TRACES) {
+    return new Response(JSON.stringify({ error: 'Server busy. Please try again shortly.' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   const target = request.nextUrl.searchParams.get('target')
 
   if (!target || !isValidTarget(target)) {
@@ -177,8 +268,9 @@ export async function GET(request: NextRequest) {
     try {
       const ips = await dnsResolve(target)
       targetIp = ips[0]
-    } catch {
-      return new Response(JSON.stringify({ error: 'Failed to resolve domain' }), {
+    } catch (err) {
+      console.error('DNS resolution failed:', err)
+      return new Response(JSON.stringify({ error: 'Could not resolve hostname' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -192,6 +284,8 @@ export async function GET(request: NextRequest) {
     ? ['-d', '-h', '30', '-w', '500', targetIp]
     : ['-m', '30', '-w', '1', '-q', '3', targetIp]
 
+  activeTraces++
+
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
@@ -203,6 +297,7 @@ export async function GET(request: NextRequest) {
       const close = () => {
         if (closed) return
         closed = true
+        activeTraces--
         controller.close()
       }
 
@@ -317,7 +412,8 @@ export async function GET(request: NextRequest) {
 
       proc.on('error', (err) => {
         clearTimeout(timeout)
-        send('error', { message: `Traceroute failed: ${err.message}` })
+        console.error('traceroute process error:', err.message)
+        send('error', { message: 'Trace failed — unable to reach target' })
         close()
       })
     },
