@@ -77,6 +77,7 @@ export const SearchBar: React.FC = () => {
         {/* Input */}
         <input
           type="text"
+          inputMode="url"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setIsFocused(true)}
