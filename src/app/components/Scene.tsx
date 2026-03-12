@@ -1,7 +1,10 @@
 'use client'
-import React, { Suspense } from 'react'
+import React, { Suspense, useRef } from 'react'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
+
+import { CameraController } from './CameraController'
 
 import { Stars } from './Stars'
 import { Countries } from './Countries'
@@ -13,6 +16,8 @@ import { HopMarkers } from './HopMarkers'
 import { RouteArcs } from './RouteArcs'
 
 const Scene: React.FC = () => {
+  const controlsRef = useRef<OrbitControlsImpl>(null)
+
   return (
     <Canvas camera={{ position: [20, 15, 20], fov: 60 }}>
       <Suspense fallback={null}>
@@ -41,6 +46,7 @@ const Scene: React.FC = () => {
         <RouteArcs />
 
         <OrbitControls
+          ref={controlsRef}
           enablePan
           enableZoom
           enableRotate
@@ -48,6 +54,7 @@ const Scene: React.FC = () => {
           maxDistance={100}
           minDistance={5}
         />
+        <CameraController controlsRef={controlsRef} />
 
         <Stars />
         <color attach="background" args={['#000000']} />
