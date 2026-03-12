@@ -20,6 +20,10 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const camera = useThree((s) => s.camera)
   const cameraTarget = useTraceStore((s) => s.cameraTarget)
   const status = useTraceStore((s) => s.status)
+  const isReplaying = useTraceStore((s) => s.isReplaying)
+  const advanceReplay = useTraceStore((s) => s.advanceReplay)
+  const replayPauseRef = useRef<number>(0) // timestamp when pause started
+  const REPLAY_PAUSE = 1200 // ms to pause at each hop before moving on
   const prevStatusRef = useRef(status)
 
   // Animation state (refs to avoid re-renders)
@@ -122,6 +126,26 @@ export const CameraController: React.FC<CameraControllerProps> = ({
         controlsRef.current.enabled = true
         controlsRef.current.update()
       }
+    }
+  })
+
+  // Replay advancement: when fly-to completes and we're replaying, wait then advance
+  useFrame(() => {
+    if (!isReplaying || isAnimating.current) {
+      replayPauseRef.current = 0
+      return
+    }
+
+    // Animation just finished — start the pause timer
+    if (replayPauseRef.current === 0) {
+      replayPauseRef.current = Date.now()
+      return
+    }
+
+    // Wait for the pause
+    if (Date.now() - replayPauseRef.current >= REPLAY_PAUSE) {
+      replayPauseRef.current = 0
+      advanceReplay()
     }
   })
 
