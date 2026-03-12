@@ -139,7 +139,7 @@ export const HopMarkers: React.FC = () => {
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
       >
-        <meshBasicMaterial toneMapped={false} depthWrite={false} vertexColors />
+        <meshBasicMaterial toneMapped={false} depthWrite={false} />
       </instancedMesh>
 
       {hoveredGeoHop && tooltipPosition && (
