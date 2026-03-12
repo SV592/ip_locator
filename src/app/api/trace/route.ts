@@ -101,8 +101,40 @@ interface GeoResult {
 
 async function geolocateIP(ip: string): Promise<GeoResult | null> {
   if (!ip || ip === '*' || isPrivateIP(ip)) return null
+
+  // Try ip-api.com first (faster, no HTTPS on free tier)
   try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country,countryCode,lat,lon,org,as`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    const data = await res.json()
+    if (data.status === 'success') {
+      return {
+        city: data.city || 'Unknown',
+        region: data.regionName || '',
+        country: data.country || 'Unknown',
+        country_code: data.countryCode || '',
+        lat: data.lat || 0,
+        lon: data.lon || 0,
+        org: data.org || null,
+        asn: data.as?.split(' ')[0] || null,
+      }
+    }
+  } catch {
+    // fall through to backup
+  }
+
+  // Fallback: ipapi.co
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
     const data = await res.json()
     if (data.error) return null
     return {
@@ -151,14 +183,21 @@ export async function GET(request: NextRequest) {
   const isWindows = platform === 'win32'
   const cmd = isWindows ? 'tracert' : 'traceroute'
   const args = isWindows
-    ? ['-h', '30', '-w', '1000', targetIp]
+    ? ['-d', '-h', '30', '-w', '500', targetIp]
     : ['-m', '30', '-w', '1', '-q', '3', targetIp]
 
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
+      let closed = false
       const send = (event: string, data: unknown) => {
+        if (closed) return
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+      }
+      const close = () => {
+        if (closed) return
+        closed = true
+        controller.close()
       }
 
       const proc = spawn(cmd, args)
@@ -176,9 +215,9 @@ export async function GET(request: NextRequest) {
 
       const timeout = setTimeout(() => {
         proc.kill()
-        send('error', { message: 'Traceroute timed out' })
-        controller.close()
-      }, 30000)
+        // Don't send error or close here — let proc.on('close')
+        // handle graceful completion with whatever data we have
+      }, 60000)
 
       async function processLine(line: string) {
         lineCount++
@@ -262,7 +301,7 @@ export async function GET(request: NextRequest) {
             averageRtt: Math.round(avgRtt * 10) / 10,
           })
           send('done', {})
-          controller.close()
+          close()
         })
       })
 
@@ -273,7 +312,7 @@ export async function GET(request: NextRequest) {
       proc.on('error', (err) => {
         clearTimeout(timeout)
         send('error', { message: `Traceroute failed: ${err.message}` })
-        controller.close()
+        close()
       })
     },
   })
