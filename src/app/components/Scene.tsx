@@ -55,7 +55,7 @@ const Scene: React.FC = () => {
           enableRotate
           target={[0, 0, 0]}
           maxDistance={100}
-          minDistance={5}
+          minDistance={3}
         />
         <CameraController controlsRef={controlsRef} />
         <PerfMonitor />
