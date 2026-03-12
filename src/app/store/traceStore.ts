@@ -34,6 +34,7 @@ interface TraceStore {
   stopReplay: () => void
   advanceReplay: () => void
   setCameraTarget: (target: { lat: number; lon: number } | null) => void
+  clearHistory: () => void
 }
 
 const MAX_HISTORY = 20
@@ -195,4 +196,9 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
   },
 
   setCameraTarget: (target) => set({ cameraTarget: target }),
+
+  clearHistory: () => {
+    try { localStorage.removeItem('trace-history') } catch {}
+    set({ searchHistory: [] })
+  },
 }))
