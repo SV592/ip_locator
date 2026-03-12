@@ -19,6 +19,8 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 }) => {
   const camera = useThree((s) => s.camera)
   const cameraTarget = useTraceStore((s) => s.cameraTarget)
+  const status = useTraceStore((s) => s.status)
+  const prevStatusRef = useRef(status)
 
   // Animation state (refs to avoid re-renders)
   const isAnimating = useRef(false)
@@ -59,6 +61,26 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     startTime.current = -1 // will be set on first frame
     isAnimating.current = true
   }, [cameraTarget, camera, controlsRef])
+
+  // Auto-zoom out to overview when trace starts
+  useEffect(() => {
+    if (prevStatusRef.current !== 'tracing' && status === 'tracing') {
+      // Set a good overview position (slightly elevated, pulled back)
+      startPos.current.copy(camera.position)
+      endPos.current.set(12, 8, 12)
+
+      const currentLookAt = new THREE.Vector3()
+      camera.getWorldDirection(currentLookAt)
+      currentLookAt.multiplyScalar(2).add(camera.position)
+      startLookAt.current.copy(currentLookAt)
+      endLookAt.current.set(0, 0, 0) // center of globe
+
+      if (controlsRef.current) controlsRef.current.enabled = false
+      startTime.current = -1
+      isAnimating.current = true
+    }
+    prevStatusRef.current = status
+  }, [status, camera, controlsRef])
 
   useFrame((state) => {
     if (!isAnimating.current) return
