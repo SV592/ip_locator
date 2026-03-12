@@ -14,6 +14,8 @@ interface TraceStore {
   selectedHopIndex: number | null
   hoveredHopIndex: number | null
   isReplaying: boolean
+  replayIndex: number       // current hop in auto-tour (-1 = not replaying)
+  cameraTarget: { lat: number; lon: number } | null  // where camera should fly to
   panelVisibility: { target: boolean; hops: boolean; stats: boolean }
 
   // History
@@ -28,6 +30,10 @@ interface TraceStore {
   selectHop: (index: number | null) => void
   hoverHop: (index: number | null) => void
   clearTrace: () => void
+  startReplay: () => void
+  stopReplay: () => void
+  advanceReplay: () => void
+  setCameraTarget: (target: { lat: number; lon: number } | null) => void
 }
 
 const MAX_HISTORY = 20
@@ -60,6 +66,8 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
   selectedHopIndex: null,
   hoveredHopIndex: null,
   isReplaying: false,
+  replayIndex: -1,
+  cameraTarget: null,
   panelVisibility: { target: true, hops: true, stats: true },
   searchHistory: loadHistory(),
 
@@ -74,10 +82,14 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
       selectedHopIndex: null,
       hoveredHopIndex: null,
       isReplaying: false,
+      replayIndex: -1,
+      cameraTarget: null,
     }),
 
   addHop: (hop: Hop) =>
-    set((state) => ({ hops: [...state.hops, hop] })),
+    set((state) => ({
+      hops: [...state.hops, { ...hop, arrivedAt: Date.now() }],
+    })),
 
   setTarget: (target: TargetInfo) =>
     set({ target }),
@@ -98,8 +110,21 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
   failTrace: (error: string) =>
     set({ status: 'error', error }),
 
-  selectHop: (index: number | null) =>
-    set({ selectedHopIndex: index }),
+  selectHop: (index: number | null) => {
+    if (index === null) {
+      set({ selectedHopIndex: null, cameraTarget: null })
+      return
+    }
+    const hop = get().hops[index]
+    if (hop?.location && hop.location.lat !== 0 && hop.location.lon !== 0) {
+      set({
+        selectedHopIndex: index,
+        cameraTarget: { lat: hop.location.lat, lon: hop.location.lon },
+      })
+    } else {
+      set({ selectedHopIndex: index, cameraTarget: null })
+    }
+  },
 
   hoverHop: (index: number | null) =>
     set({ hoveredHopIndex: index }),
@@ -115,5 +140,51 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
       selectedHopIndex: null,
       hoveredHopIndex: null,
       isReplaying: false,
+      replayIndex: -1,
+      cameraTarget: null,
     }),
+
+  startReplay: () => {
+    const { hops } = get()
+    const firstGeo = hops.findIndex(
+      (h) => h.location && h.location.lat !== 0 && h.location.lon !== 0
+    )
+    if (firstGeo === -1) return
+    set({
+      isReplaying: true,
+      replayIndex: firstGeo,
+      selectedHopIndex: firstGeo,
+      cameraTarget: {
+        lat: hops[firstGeo].location!.lat,
+        lon: hops[firstGeo].location!.lon,
+      },
+    })
+  },
+
+  stopReplay: () =>
+    set({ isReplaying: false, replayIndex: -1, cameraTarget: null }),
+
+  advanceReplay: () => {
+    const { hops, replayIndex } = get()
+    let next = replayIndex + 1
+    while (next < hops.length) {
+      const h = hops[next]
+      if (h.location && h.location.lat !== 0 && h.location.lon !== 0) break
+      next++
+    }
+    if (next >= hops.length) {
+      set({ isReplaying: false, replayIndex: -1, cameraTarget: null })
+      return
+    }
+    set({
+      replayIndex: next,
+      selectedHopIndex: next,
+      cameraTarget: {
+        lat: hops[next].location!.lat,
+        lon: hops[next].location!.lon,
+      },
+    })
+  },
+
+  setCameraTarget: (target) => set({ cameraTarget: target }),
 }))

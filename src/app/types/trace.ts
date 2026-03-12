@@ -15,6 +15,7 @@ export interface Hop {
   location: HopLocation | null
   org: string | null
   asn: string | null
+  arrivedAt?: number  // timestamp when this hop was added to the store
 }
 
 export interface TargetInfo {
