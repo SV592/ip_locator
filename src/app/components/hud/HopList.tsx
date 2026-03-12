@@ -2,13 +2,7 @@
 
 import React from 'react'
 import { useTraceStore } from '../../store/traceStore'
-
-function rttColor(rtt: number | null): string {
-  if (rtt === null) return 'text-gray-600'
-  if (rtt < 50) return 'text-green-400'
-  if (rtt < 150) return 'text-yellow-400'
-  return 'text-red-400'
-}
+import { getRttTextClass } from '../../utils/rttColor'
 
 export const HopList: React.FC = () => {
   const hops = useTraceStore((s) => s.hops)
@@ -46,7 +40,7 @@ export const HopList: React.FC = () => {
               <span className="text-white font-mono flex-1 truncate">
                 {hop.ip === '*' ? '* * *' : hop.ip}
               </span>
-              <span className={`font-mono ${rttColor(avg)}`}>
+              <span className={`font-mono ${getRttTextClass(avg)}`}>
                 {avg !== null ? `${Math.round(avg)}ms` : '\u2014'}
               </span>
               {hop.location?.country_code && (
