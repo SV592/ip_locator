@@ -4,6 +4,7 @@ import React, { useRef, useMemo } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useTraceStore } from '../store/traceStore'
+import { perfThrottle } from './PerfMonitor'
 import { latLonToVec3, EARTH_RADIUS } from '../utils/geoMath'
 
 const PARTICLES_PER_ARC = 3
@@ -62,6 +63,8 @@ export const ArcParticles: React.FC = () => {
 
   useFrame((state) => {
     if (!pointsRef.current || arcPaths.length === 0) return
+    // Skip particle updates when frame budget is tight
+    if (perfThrottle.active) return
 
     const t = state.clock.elapsedTime
 
