@@ -43,7 +43,13 @@ async function consumeSSEStream(
       if (!eventMatch || !dataMatch) continue
 
       const event = eventMatch[1].trim()
-      const data = JSON.parse(dataMatch[1])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any
+      try {
+        data = JSON.parse(dataMatch[1])
+      } catch {
+        continue // skip malformed SSE messages
+      }
 
       switch (event) {
         case 'hop':

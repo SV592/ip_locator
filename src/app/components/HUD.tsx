@@ -11,6 +11,7 @@ import { HistoryPanel } from './hud/HistoryPanel'
 import { InfoPanel } from './hud/InfoPanel'
 import { KonamiCode } from './KonamiCode'
 import { Achievement } from './hud/Achievement'
+import { SignalLost } from './hud/SignalLost'
 
 export const HUD: React.FC = () => {
   return (
@@ -43,6 +44,7 @@ export const HUD: React.FC = () => {
       </div>
       <Achievement />
       <KonamiCode />
+      <SignalLost />
     </div>
   )
 }
