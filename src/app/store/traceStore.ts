@@ -86,10 +86,18 @@ export const useTraceStore = create<TraceStore>((set, get) => ({
       cameraTarget: null,
     }),
 
-  addHop: (hop: Hop) =>
+  addHop: (hop: Hop) => {
+    const newHop = { ...hop, arrivedAt: Date.now() }
+    const { status } = get()
+    const hasGeo = newHop.location && newHop.location.lat !== 0 && newHop.location.lon !== 0
     set((state) => ({
-      hops: [...state.hops, { ...hop, arrivedAt: Date.now() }],
-    })),
+      hops: [...state.hops, newHop],
+      // Auto-fly camera to each new geolocated hop during tracing
+      ...(status === 'tracing' && hasGeo
+        ? { cameraTarget: { lat: newHop.location!.lat, lon: newHop.location!.lon } }
+        : {}),
+    }))
+  },
 
   setTarget: (target: TargetInfo) =>
     set({ target }),
