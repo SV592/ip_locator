@@ -59,7 +59,7 @@ export const ArcParticles: React.FC = () => {
 
   // Pre-allocate with fixed max size to avoid reallocation race conditions
   const MAX_PARTICLES = 30 * PARTICLES_PER_ARC // 30 max arcs × 3 particles
-  const positionArray = useMemo(() => new Float32Array(MAX_PARTICLES * 3), [])
+  const positionArray = useMemo(() => new Float32Array(MAX_PARTICLES * 3), [MAX_PARTICLES])
 
   useFrame((state) => {
     if (!pointsRef.current || arcPaths.length === 0) return

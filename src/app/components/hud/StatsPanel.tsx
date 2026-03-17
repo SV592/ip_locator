@@ -11,7 +11,7 @@ const downloadTraceJSON = () => {
     input: traceInput,
     timestamp,
     target,
-    hops: hops.map(({ arrivedAt, ...rest }) => rest),
+    hops: hops.map(({ arrivedAt: _, ...rest }) => rest),
     summary,
   }
 

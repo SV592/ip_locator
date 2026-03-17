@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { useThree, useFrame } from '@react-three/fiber'
 import { useTraceStore } from '../store/traceStore'
 import { getCameraPositionForLatLon, easeInOutCubic } from '../utils/cameramath'
-import { EARTH_RADIUS } from '../utils/geoMath'
+
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 interface CameraControllerProps {

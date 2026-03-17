@@ -6,7 +6,6 @@ import { useFrame } from '@react-three/fiber'
 // Shared across components — import this ref to check if throttling
 export const perfThrottle = { active: false }
 
-const TARGET_FRAME_MS = 16.67 // 60fps
 const THROTTLE_THRESHOLD_MS = 22 // ~45fps — start throttling
 const SAMPLE_COUNT = 30
 
