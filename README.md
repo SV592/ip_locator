@@ -71,5 +71,4 @@ Open [http://localhost:3000](http://localhost:3000) and try tracing `8.8.8.8` or
 - Max 10 concurrent traces
 - Input validation (hostname/IP regex, 253 char max)
 - Full IPv4 and IPv6 private range detection
-- Sanitized error messages (no internal details exposed)
 - 60-second timeout per trace
