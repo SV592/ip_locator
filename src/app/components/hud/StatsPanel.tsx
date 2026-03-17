@@ -44,7 +44,7 @@ export const StatsPanel: React.FC = () => {
   }
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-2 md:p-3">
       <div className="flex justify-between items-center mb-2 border-b border-orange-400/20 pb-1">
         <div className="text-[10px] text-orange-400 uppercase tracking-widest">
           Statistics
@@ -52,7 +52,7 @@ export const StatsPanel: React.FC = () => {
         {status === 'complete' && (
           <button
             onClick={downloadTraceJSON}
-            className="text-gray-500 hover:text-cyan-400 transition-colors text-[9px] uppercase tracking-wider"
+            className="text-gray-500 hover:text-cyan-400 transition-colors text-[11px] md:text-[9px] uppercase tracking-wider px-1 py-1"
           >
             export
           </button>

@@ -84,7 +84,7 @@ export const SearchBar: React.FC = () => {
           onBlur={() => setIsFocused(false)}
           placeholder="0.0.0.0"
           spellCheck={false}
-          className="flex-1 bg-transparent text-white/90 placeholder-white/15 py-2.5 text-sm font-mono tracking-wide focus:outline-none"
+          className="flex-1 bg-transparent text-white/90 placeholder-white/15 py-3 md:py-2.5 text-base md:text-sm font-mono tracking-wide focus:outline-none"
         />
 
         {/* Divider */}
@@ -93,7 +93,7 @@ export const SearchBar: React.FC = () => {
         {/* Action button */}
         <button
           type="submit"
-          className={`px-4 py-2.5 text-[10px] font-mono uppercase tracking-[0.15em] transition-all duration-200 whitespace-nowrap rounded-r-md ${
+          className={`px-4 py-3 md:py-2.5 text-xs md:text-[10px] font-mono uppercase tracking-[0.15em] transition-all duration-200 whitespace-nowrap rounded-r-md ${
             isTracing
               ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
               : 'text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/10'

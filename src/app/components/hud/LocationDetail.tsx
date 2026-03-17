@@ -27,7 +27,7 @@ export const LocationDetail: React.FC = () => {
   const avg = avgRtt.length > 0 ? avgRtt.reduce((a, b) => a + b, 0) / avgRtt.length : null
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-2 md:p-3">
       <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
         Location — Hop {hop.hop}
       </div>

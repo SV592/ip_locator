@@ -10,7 +10,7 @@ export const TargetPanel: React.FC = () => {
   if (status === 'idle') return null
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 mb-2">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-2 md:p-3 mb-0 md:mb-2">
       <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
         Target
       </div>

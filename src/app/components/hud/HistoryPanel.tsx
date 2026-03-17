@@ -26,7 +26,7 @@ export const HistoryPanel: React.FC = () => {
   if (searchHistory.length === 0) return null
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 max-h-[30vh] overflow-y-auto">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-2 md:p-3 max-h-[25vh] md:max-h-[30vh] overflow-y-auto">
       <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
         History
       </div>
@@ -35,7 +35,7 @@ export const HistoryPanel: React.FC = () => {
           <div
             key={`${entry.input}-${entry.timestamp}`}
             onClick={() => trace(entry.input)}
-            className="flex items-center justify-between gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer hover:bg-white/5 transition-colors"
+            className="flex items-center justify-between gap-2 text-xs md:text-[11px] px-2 py-2 md:py-1.5 rounded cursor-pointer hover:bg-white/5 transition-colors"
           >
             <div className="flex-1 min-w-0">
               <div className="text-white font-mono truncate">{entry.input}</div>
@@ -54,7 +54,7 @@ export const HistoryPanel: React.FC = () => {
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); clearHistory() }}
-        className="mt-2 w-full text-[9px] text-gray-600 hover:text-red-400 uppercase tracking-wider transition-colors py-1 border-t border-cyan-500/10"
+        className="mt-2 w-full text-[11px] md:text-[9px] text-gray-600 hover:text-red-400 uppercase tracking-wider transition-colors py-2 md:py-1 border-t border-cyan-500/10"
       >
         clear history
       </button>

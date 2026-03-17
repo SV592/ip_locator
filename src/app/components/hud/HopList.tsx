@@ -19,7 +19,7 @@ export const HopList: React.FC = () => {
   if (status === 'idle') return null
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-3 max-h-[40vh] overflow-y-auto hud-scrollbar">
+    <div className="bg-black/50 backdrop-blur-sm border border-cyan-500/15 rounded-md p-2 md:p-3 max-h-[35vh] md:max-h-[40vh] overflow-y-auto hud-scrollbar">
       <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-2 border-b border-orange-400/20 pb-1">
         Route
       </div>
@@ -40,7 +40,7 @@ export const HopList: React.FC = () => {
               onClick={() => selectHop(isSelected ? null : i)}
               onMouseEnter={() => hoverHop(i)}
               onMouseLeave={() => hoverHop(null)}
-              className={`flex items-center gap-2 text-[11px] px-2 py-1 rounded cursor-pointer transition-colors ${
+              className={`flex items-center gap-2 text-xs md:text-[11px] px-2 py-2 md:py-1 rounded cursor-pointer transition-colors ${
                 isSelected
                   ? 'bg-orange-500/20 border border-orange-500/30'
                   : 'hover:bg-white/5'

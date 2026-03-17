@@ -59,7 +59,7 @@ export const CommandBar: React.FC = () => {
 
   return (
     <div
-      className="flex items-center justify-between backdrop-blur-sm px-4 py-2 transition-all duration-300"
+      className="flex items-center justify-between backdrop-blur-sm px-3 md:px-4 py-2 transition-all duration-300"
       style={{
         background: isError ? 'rgba(127,29,29,0.15)' : 'rgba(0,0,0,0.6)',
         borderTop: isError
@@ -82,7 +82,7 @@ export const CommandBar: React.FC = () => {
           style={isError ? { boxShadow: '0 0 6px rgba(239,68,68,0.8)', animation: 'errorDotPulse 1s ease-in-out infinite' } : {}}
         />
         <span
-          className="text-[10px] uppercase tracking-wider font-mono"
+          className="text-[11px] md:text-[10px] uppercase tracking-wider font-mono"
           style={{
             color: isError ? 'rgba(248,113,113,0.9)' : 'rgba(156,163,175,1)',
             ...(isError ? { textShadow: '0 0 8px rgba(239,68,68,0.4)' } : {}),
@@ -92,10 +92,9 @@ export const CommandBar: React.FC = () => {
         </span>
         {error && (
           <span
-            className="text-[10px] font-mono ml-1 truncate"
+            className="text-[10px] font-mono ml-1 truncate max-w-[140px] md:max-w-[280px]"
             style={{
               color: 'rgba(252,165,165,0.7)',
-              maxWidth: '280px',
             }}
           >
             {glitchedError}
@@ -104,11 +103,11 @@ export const CommandBar: React.FC = () => {
       </div>
 
       {status !== 'idle' && (
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
           {status === 'complete' && (
             <button
               onClick={isReplaying ? stopReplay : startReplay}
-              className={`text-[10px] uppercase tracking-wider transition-colors font-mono cursor-pointer ${
+              className={`text-[11px] md:text-[10px] uppercase tracking-wider transition-colors font-mono cursor-pointer px-1 py-1 ${
                 isReplaying
                   ? 'text-orange-400 hover:text-orange-300'
                   : 'text-gray-500 hover:text-white'
@@ -129,7 +128,7 @@ export const CommandBar: React.FC = () => {
                   }, 100)
                 }
               }}
-              className="text-[10px] text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors font-mono cursor-pointer"
+              className="text-[11px] md:text-[10px] text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors font-mono cursor-pointer px-1 py-1"
               style={{ textShadow: '0 0 6px rgba(239,68,68,0.3)' }}
             >
               retry
@@ -137,7 +136,7 @@ export const CommandBar: React.FC = () => {
           )}
           <button
             onClick={clearTrace}
-            className="text-[10px] text-gray-500 hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
+            className="text-[11px] md:text-[10px] text-gray-500 hover:text-white uppercase tracking-wider transition-colors cursor-pointer px-1 py-1"
           >
             {isError ? 'dismiss' : 'clear'}
           </button>
