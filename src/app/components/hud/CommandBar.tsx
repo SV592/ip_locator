@@ -59,9 +59,9 @@ export const CommandBar: React.FC = () => {
 
   return (
     <div
-      className="flex items-center justify-between backdrop-blur-sm px-3 md:px-4 py-2 transition-all duration-300"
+      className="flex items-center justify-between backdrop-blur-sm px-3 md:px-4 py-3 md:py-2 transition-all duration-300"
       style={{
-        background: isError ? 'rgba(127,29,29,0.15)' : 'rgba(0,0,0,0.6)',
+        background: isError ? 'rgba(127,29,29,0.15)' : 'rgba(0,0,0,0.85)',
         borderTop: isError
           ? '1px solid rgba(239,68,68,0.3)'
           : '1px solid rgba(6,182,212,0.1)',

@@ -22,7 +22,7 @@ export const HUD: React.FC = () => {
   const hasData = status !== 'idle'
 
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col">
+    <div className="absolute inset-0 pointer-events-none flex flex-col z-10">
       {/* Top: SearchBar */}
       <div className="pointer-events-auto pt-3 md:pt-4 px-3 md:px-4 flex justify-center">
         <SearchBar />
@@ -45,12 +45,19 @@ export const HUD: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile: Bottom drawer toggle */}
-      {hasData && (
-        <div className="md:hidden flex-1" />
-      )}
-      {hasData && (
-        <div className="md:hidden pointer-events-auto">
+      {/* Mobile: spacer pushes bottom content down */}
+      <div className="md:hidden flex-1" />
+
+      {/* Mobile: Bottom section — drawer toggle, drawer, command bar */}
+      <div
+        className="md:hidden pointer-events-auto"
+        onTouchMove={(e) => {
+          // Prevent canvas OrbitControls from stealing scroll inside the drawer
+          if (drawerOpen) e.stopPropagation()
+        }}
+      >
+        {/* Drawer toggle */}
+        {hasData && (
           <button
             onClick={() => setDrawerOpen(!drawerOpen)}
             className="w-full flex items-center justify-between px-4 py-2.5 bg-black/70 backdrop-blur-sm border-t border-cyan-500/15"
@@ -70,33 +77,42 @@ export const HUD: React.FC = () => {
               {drawerOpen ? '▾' : '▴'}
             </span>
           </button>
-        </div>
-      )}
+        )}
 
-      {/* Mobile: Drawer content */}
-      {hasData && drawerOpen && (
-        <div className="md:hidden pointer-events-auto bg-black/80 backdrop-blur-md border-t border-cyan-500/15 max-h-[60vh] overflow-y-auto hud-scrollbar">
-          <div className="p-3 space-y-2">
-            <TargetPanel />
-            <StatsPanel />
-            <HopList />
-            <LocationDetail />
-            <HistoryPanel />
+        {/* Drawer content */}
+        {hasData && drawerOpen && (
+          <div
+            className="bg-black/90 backdrop-blur-md border-t border-cyan-500/15 overflow-y-auto overscroll-contain hud-scrollbar"
+            style={{ maxHeight: '60vh', WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="p-3 space-y-2">
+              <TargetPanel />
+              <StatsPanel />
+              <HopList />
+              <LocationDetail />
+              <HistoryPanel />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Mobile: InfoPanel when idle */}
-      {!hasData && (
-        <div className="md:hidden pointer-events-auto px-3 pb-3 mt-auto">
-          <InfoPanel />
-        </div>
-      )}
+        {/* InfoPanel when idle */}
+        {!hasData && (
+          <div className="px-3 pb-3">
+            <InfoPanel />
+          </div>
+        )}
+      </div>
 
-      {/* Bottom: Command bar */}
-      <div className="pointer-events-auto">
+      {/* Desktop: Command bar shown inline */}
+      <div className="hidden md:block pointer-events-auto">
         <CommandBar />
       </div>
+
+      {/* Mobile: Command bar pinned at bottom with solid background */}
+      <div className="md:hidden pointer-events-auto relative z-20">
+        <CommandBar />
+      </div>
+
       <Achievement />
       <KonamiCode />
       <SignalLost />
