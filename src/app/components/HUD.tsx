@@ -81,17 +81,26 @@ export const HUD: React.FC = () => {
 
         {/* Drawer content */}
         {hasData && drawerOpen && (
-          <div
-            className="bg-black/90 backdrop-blur-md border-t border-cyan-500/15 overflow-y-auto overscroll-contain hud-scrollbar"
-            style={{ maxHeight: '60vh', WebkitOverflowScrolling: 'touch' }}
-          >
-            <div className="p-3 space-y-2">
-              <TargetPanel />
-              <StatsPanel />
-              <HopList />
-              <LocationDetail />
-              <HistoryPanel />
+          <div className="relative">
+            <div
+              className="bg-black/90 backdrop-blur-md border-t border-cyan-500/15 overflow-y-auto overscroll-contain hud-scrollbar"
+              style={{ maxHeight: '60vh', WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="p-3 space-y-2">
+                <TargetPanel />
+                <StatsPanel />
+                <HopList />
+                <LocationDetail />
+                <HistoryPanel />
+              </div>
             </div>
+            {/* Scroll hint gradient */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)',
+              }}
+            />
           </div>
         )}
 
