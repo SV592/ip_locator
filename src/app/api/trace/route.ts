@@ -226,6 +226,154 @@ async function fetchGeoData(ip: string): Promise<GeoResult | null> {
   return null
 }
 
+// --- GlobalPing API fallback (for serverless environments) ---
+
+interface GlobalPingHop {
+  resolvedHostname: string
+  resolvedAddress: string
+  timings: { rtt: number }[]
+}
+
+interface GlobalPingResult {
+  probe: { city: string; country: string; asn: number; network: string }
+  result: {
+    status: string
+    resolvedAddress: string
+    resolvedHostname: string
+    hops: GlobalPingHop[]
+  }
+}
+
+async function traceViaGlobalPing(
+  targetIp: string,
+  target: string,
+  send: (event: string, data: unknown) => void,
+  close: () => void,
+) {
+  try {
+    // Create measurement
+    const createRes = await fetch('https://api.globalping.io/v1/measurements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'traceroute',
+        target: targetIp,
+        locations: [{ magic: 'North America' }],
+        limit: 1,
+      }),
+    })
+
+    if (!createRes.ok) {
+      send('error', { message: 'Trace service unavailable' })
+      close()
+      return
+    }
+
+    const { id } = await createRes.json() as { id: string }
+
+    // Poll for results (max 30s)
+    let result: GlobalPingResult | null = null
+    for (let attempt = 0; attempt < 15; attempt++) {
+      await new Promise(r => setTimeout(r, 2000))
+
+      const pollRes = await fetch(`https://api.globalping.io/v1/measurements/${id}`)
+      if (!pollRes.ok) continue
+
+      const data = await pollRes.json() as { status: string; results: GlobalPingResult[] }
+      if (data.status === 'finished' && data.results?.[0]) {
+        result = data.results[0]
+        break
+      }
+    }
+
+    if (!result || result.result.status !== 'finished') {
+      send('error', { message: 'Trace timed out' })
+      close()
+      return
+    }
+
+    // Process hops
+    const hops = result.result.hops
+    let hopCount = 0
+    let respondingHops = 0
+    const countries = new Set<string>()
+    const allRtts: number[] = []
+
+    for (let i = 0; i < hops.length; i++) {
+      const h = hops[i]
+      const ip = h.resolvedAddress || '*'
+      const rttValues = h.timings.map(t => t.rtt)
+
+      hopCount++
+      if (ip !== '*') respondingHops++
+      for (const t of rttValues) {
+        if (t !== null) allRtts.push(t)
+      }
+
+      const geo = await geolocateIP(ip)
+      const hop = {
+        hop: i + 1,
+        ip,
+        hostname: h.resolvedHostname || ip,
+        rtt: rttValues.length > 0 ? rttValues : [null, null, null],
+        location: geo ? {
+          city: geo.city,
+          region: geo.region,
+          country: geo.country,
+          country_code: geo.country_code,
+          lat: geo.lat,
+          lon: geo.lon,
+        } : null,
+        org: geo?.org || (isPrivateIP(ip) ? 'Private Network' : null),
+        asn: geo?.asn || null,
+      }
+
+      if (geo?.country_code) countries.add(geo.country_code)
+      send('hop', hop)
+    }
+
+    // Emit target event
+    const targetGeo = await geolocateIP(targetIp)
+    if (targetGeo) {
+      send('target', {
+        ip: targetIp,
+        hostname: target !== targetIp ? target : result.result.resolvedHostname || targetIp,
+        city: targetGeo.city,
+        region: targetGeo.region,
+        country: targetGeo.country,
+        lat: targetGeo.lat,
+        lon: targetGeo.lon,
+        org: targetGeo.org || 'Unknown',
+      })
+    }
+
+    const avgRtt = allRtts.length > 0
+      ? allRtts.reduce((s, r) => s + r, 0) / allRtts.length
+      : 0
+
+    send('summary', {
+      totalHops: hopCount,
+      respondingHops,
+      countries: countries.size,
+      averageRtt: Math.round(avgRtt * 10) / 10,
+    })
+    send('done', {})
+    close()
+  } catch (err) {
+    console.error('GlobalPing trace error:', err)
+    send('error', { message: 'Trace failed — unable to reach target' })
+    close()
+  }
+}
+
+// --- Detect if local traceroute is available ---
+
+function canSpawnTraceroute(): boolean {
+  // Vercel/serverless sets specific env vars
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) return false
+  return true
+}
+
 // --- SSE endpoint ---
 
 export async function GET(request: NextRequest) {
@@ -277,12 +425,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const platform = os.platform()
-  const isWindows = platform === 'win32'
-  const cmd = isWindows ? 'tracert' : 'traceroute'
-  const args = isWindows
-    ? ['-d', '-h', '30', '-w', '500', targetIp]
-    : ['-m', '30', '-w', '1', '-q', '3', targetIp]
+  // Private IPs can't be traced via GlobalPing
+  if (isPrivateIP(targetIp) && !canSpawnTraceroute()) {
+    return new Response(JSON.stringify({ error: 'Cannot trace private/local addresses from hosted environment' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   activeTraces++
 
@@ -301,121 +450,12 @@ export async function GET(request: NextRequest) {
         controller.close()
       }
 
-      const proc = spawn(cmd, args)
-      let buffer = ''
-      let hopCount = 0
-      let respondingHops = 0
-      const countries = new Set<string>()
-      const allRtts: number[] = []
-      const headerLines = isWindows ? 4 : 1
-      let lineCount = 0
-
-      // Queue to serialize async geolocation — prevents race conditions
-      // from concurrent data events
-      let queue: Promise<void> = Promise.resolve()
-
-      const timeout = setTimeout(() => {
-        proc.kill()
-        // Don't send error or close here — let proc.on('close')
-        // handle graceful completion with whatever data we have
-      }, 60000)
-
-      async function processLine(line: string) {
-        lineCount++
-        if (lineCount <= headerLines || !line.trim()) return
-
-        const parsed = isWindows ? parseWindowsLine(line) : parseUnixLine(line)
-        if (!parsed) return
-
-        hopCount++
-        if (parsed.ip !== '*') respondingHops++
-        for (const t of parsed.rtt) {
-          if (t !== null) allRtts.push(t)
-        }
-
-        // Geolocate (async but serialized via queue)
-        const geo = await geolocateIP(parsed.ip)
-        const hop = {
-          hop: parsed.hop,
-          ip: parsed.ip,
-          hostname: parsed.hostname,
-          rtt: parsed.rtt,
-          location: geo ? {
-            city: geo.city,
-            region: geo.region,
-            country: geo.country,
-            country_code: geo.country_code,
-            lat: geo.lat,
-            lon: geo.lon,
-          } : null,
-          org: geo?.org || (isPrivateIP(parsed.ip) ? 'Private Network' : null),
-          asn: geo?.asn || null,
-        }
-
-        if (geo?.country_code) countries.add(geo.country_code)
-        send('hop', hop)
+      // Use local traceroute if available, otherwise fall back to GlobalPing
+      if (canSpawnTraceroute()) {
+        runLocalTrace(targetIp, target, send, close)
+      } else {
+        traceViaGlobalPing(targetIp, target, send, close)
       }
-
-      proc.stdout.on('data', (chunk: Buffer) => {
-        buffer += chunk.toString()
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          // Chain each line onto the queue to serialize processing
-          queue = queue.then(() => processLine(line))
-        }
-      })
-
-      proc.on('close', () => {
-        clearTimeout(timeout)
-
-        // Process remaining buffer (also geolocated), then emit summary
-        queue = queue.then(async () => {
-          if (buffer.trim()) {
-            await processLine(buffer)
-          }
-
-          // Emit target event: geolocate the target IP itself
-          const targetGeo = await geolocateIP(targetIp)
-          if (targetGeo) {
-            send('target', {
-              ip: targetIp,
-              hostname: target !== targetIp ? target : targetIp,
-              city: targetGeo.city,
-              region: targetGeo.region,
-              country: targetGeo.country,
-              lat: targetGeo.lat,
-              lon: targetGeo.lon,
-              org: targetGeo.org || 'Unknown',
-            })
-          }
-
-          const avgRtt = allRtts.length > 0
-            ? allRtts.reduce((s, r) => s + r, 0) / allRtts.length
-            : 0
-
-          send('summary', {
-            totalHops: hopCount,
-            respondingHops,
-            countries: countries.size,
-            averageRtt: Math.round(avgRtt * 10) / 10,
-          })
-          send('done', {})
-          close()
-        })
-      })
-
-      proc.stderr.on('data', (chunk: Buffer) => {
-        console.error('traceroute stderr:', chunk.toString())
-      })
-
-      proc.on('error', (err) => {
-        clearTimeout(timeout)
-        console.error('traceroute process error:', err.message)
-        send('error', { message: 'Trace failed — unable to reach target' })
-        close()
-      })
     },
   })
 
@@ -425,5 +465,133 @@ export async function GET(request: NextRequest) {
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
     },
+  })
+}
+
+// --- Local traceroute (spawns system process) ---
+
+function runLocalTrace(
+  targetIp: string,
+  target: string,
+  send: (event: string, data: unknown) => void,
+  close: () => void,
+) {
+  const platform = os.platform()
+  const isWindows = platform === 'win32'
+  const cmd = isWindows ? 'tracert' : 'traceroute'
+  const args = isWindows
+    ? ['-d', '-h', '30', '-w', '500', targetIp]
+    : ['-m', '30', '-w', '1', '-q', '3', targetIp]
+
+  const proc = spawn(cmd, args)
+  let buffer = ''
+  let hopCount = 0
+  let respondingHops = 0
+  const countries = new Set<string>()
+  const allRtts: number[] = []
+  const headerLines = isWindows ? 4 : 1
+  let lineCount = 0
+
+  // Queue to serialize async geolocation — prevents race conditions
+  // from concurrent data events
+  let queue: Promise<void> = Promise.resolve()
+
+  const timeout = setTimeout(() => {
+    proc.kill()
+  }, 60000)
+
+  async function processLine(line: string) {
+    lineCount++
+    if (lineCount <= headerLines || !line.trim()) return
+
+    const parsed = isWindows ? parseWindowsLine(line) : parseUnixLine(line)
+    if (!parsed) return
+
+    hopCount++
+    if (parsed.ip !== '*') respondingHops++
+    for (const t of parsed.rtt) {
+      if (t !== null) allRtts.push(t)
+    }
+
+    // Geolocate (async but serialized via queue)
+    const geo = await geolocateIP(parsed.ip)
+    const hop = {
+      hop: parsed.hop,
+      ip: parsed.ip,
+      hostname: parsed.hostname,
+      rtt: parsed.rtt,
+      location: geo ? {
+        city: geo.city,
+        region: geo.region,
+        country: geo.country,
+        country_code: geo.country_code,
+        lat: geo.lat,
+        lon: geo.lon,
+      } : null,
+      org: geo?.org || (isPrivateIP(parsed.ip) ? 'Private Network' : null),
+      asn: geo?.asn || null,
+    }
+
+    if (geo?.country_code) countries.add(geo.country_code)
+    send('hop', hop)
+  }
+
+  proc.stdout.on('data', (chunk: Buffer) => {
+    buffer += chunk.toString()
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      queue = queue.then(() => processLine(line))
+    }
+  })
+
+  proc.on('close', () => {
+    clearTimeout(timeout)
+
+    queue = queue.then(async () => {
+      if (buffer.trim()) {
+        await processLine(buffer)
+      }
+
+      // Emit target event: geolocate the target IP itself
+      const targetGeo = await geolocateIP(targetIp)
+      if (targetGeo) {
+        send('target', {
+          ip: targetIp,
+          hostname: target !== targetIp ? target : targetIp,
+          city: targetGeo.city,
+          region: targetGeo.region,
+          country: targetGeo.country,
+          lat: targetGeo.lat,
+          lon: targetGeo.lon,
+          org: targetGeo.org || 'Unknown',
+        })
+      }
+
+      const avgRtt = allRtts.length > 0
+        ? allRtts.reduce((s, r) => s + r, 0) / allRtts.length
+        : 0
+
+      send('summary', {
+        totalHops: hopCount,
+        respondingHops,
+        countries: countries.size,
+        averageRtt: Math.round(avgRtt * 10) / 10,
+      })
+      send('done', {})
+      close()
+    })
+  })
+
+  proc.stderr.on('data', (chunk: Buffer) => {
+    console.error('traceroute stderr:', chunk.toString())
+  })
+
+  proc.on('error', (err) => {
+    clearTimeout(timeout)
+    console.error('traceroute process error:', err.message)
+    // Local spawn failed — fall back to GlobalPing
+    traceViaGlobalPing(targetIp, target, send, close)
   })
 }
