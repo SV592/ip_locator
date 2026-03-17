@@ -15,6 +15,7 @@
     "@react-three/drei": "^10.7.4",
     "@react-three/fiber": "^9.3.0",
     "@types/three": "^0.179.0",
+    "@vercel/analytics": "^2.0.1",
     "leaflet": "^1.9.4",
     "next": "^16.1.7",
     "react": "19.1.0",
