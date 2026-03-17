@@ -15,6 +15,11 @@ const KONAMI_SEQUENCE = [
   'a',
 ]
 
+// Touch swipe version: up, up, down, down, left, right, left, right, tap, tap
+const SWIPE_SEQUENCE = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right', 'tap', 'tap']
+const SWIPE_THRESHOLD = 30 // px minimum swipe distance
+const SWIPE_TIMEOUT = 3000 // ms to complete the sequence
+
 const DURATION = 6000
 const COLUMN_COUNT = 50
 const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン0123456789ABCDEF'
@@ -29,10 +34,22 @@ interface RainDrop {
 export const KonamiCode: React.FC = () => {
   const [activated, setActivated] = useState(false)
   const keysRef = useRef<string[]>([])
+  const swipesRef = useRef<string[]>([])
+  const swipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
   const dropsRef = useRef<RainDrop[]>([])
+
+  const activate = useCallback(() => {
+    setActivated(true)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setActivated(false)
+      timerRef.current = null
+    }, DURATION)
+  }, [])
 
   const startRain = useCallback(() => {
     const canvas = canvasRef.current
@@ -118,6 +135,7 @@ export const KonamiCode: React.FC = () => {
     }
   }, [])
 
+  // Keyboard listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keysRef.current = [...keysRef.current, e.key].slice(-KONAMI_SEQUENCE.length)
@@ -127,13 +145,7 @@ export const KonamiCode: React.FC = () => {
         keysRef.current.every((key, i) => key === KONAMI_SEQUENCE[i])
       ) {
         keysRef.current = []
-        setActivated(true)
-
-        if (timerRef.current) clearTimeout(timerRef.current)
-        timerRef.current = setTimeout(() => {
-          setActivated(false)
-          timerRef.current = null
-        }, DURATION)
+        activate()
       }
     }
 
@@ -143,7 +155,73 @@ export const KonamiCode: React.FC = () => {
       if (timerRef.current) clearTimeout(timerRef.current)
       stopRain()
     }
-  }, [stopRain])
+  }, [stopRain, activate])
+
+  // Touch swipe listener
+  useEffect(() => {
+    const resetSwipeSequence = () => {
+      swipesRef.current = []
+      if (swipeTimerRef.current) {
+        clearTimeout(swipeTimerRef.current)
+        swipeTimerRef.current = null
+      }
+    }
+
+    const addSwipe = (direction: string) => {
+      // Reset timeout — user has 3s between gestures
+      if (swipeTimerRef.current) clearTimeout(swipeTimerRef.current)
+      swipeTimerRef.current = setTimeout(resetSwipeSequence, SWIPE_TIMEOUT)
+
+      swipesRef.current = [...swipesRef.current, direction].slice(-SWIPE_SEQUENCE.length)
+
+      if (
+        swipesRef.current.length === SWIPE_SEQUENCE.length &&
+        swipesRef.current.every((s, i) => s === SWIPE_SEQUENCE[i])
+      ) {
+        resetSwipeSequence()
+        activate()
+      }
+    }
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return
+      const touch = e.changedTouches[0]
+      const dx = touch.clientX - touchStartRef.current.x
+      const dy = touch.clientY - touchStartRef.current.y
+      const elapsed = Date.now() - touchStartRef.current.time
+      touchStartRef.current = null
+
+      // Must complete within 500ms
+      if (elapsed > 500) return
+
+      const absDx = Math.abs(dx)
+      const absDy = Math.abs(dy)
+
+      if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
+        // Tap
+        addSwipe('tap')
+      } else if (absDx > absDy) {
+        // Horizontal swipe
+        addSwipe(dx > 0 ? 'right' : 'left')
+      } else {
+        // Vertical swipe
+        addSwipe(dy > 0 ? 'down' : 'up')
+      }
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchend', handleTouchEnd)
+      if (swipeTimerRef.current) clearTimeout(swipeTimerRef.current)
+    }
+  }, [activate])
 
   // Start/stop rain when activated changes
   useEffect(() => {
