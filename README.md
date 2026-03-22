@@ -54,8 +54,6 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and try tracing `8.8.8.8` or `cloudflare.com`.
-
 ## How It Works
 
 1. You enter an IP address or hostname in the search bar
